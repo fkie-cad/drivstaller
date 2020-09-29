@@ -1,7 +1,7 @@
 # DRIVSTALLER #
 Installs a driver as a service using the .sys file.
 
-Generic standalone tool extracted from Windows Driver examples.
+Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
