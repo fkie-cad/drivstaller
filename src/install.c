@@ -73,22 +73,20 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
 			break;
 
 		case MODE_REMOVE:
-			StopDriver(schSCManager, Name);
-			RemoveDriver(schSCManager, Name);
+			rCode = StopDriver(schSCManager, Name);
+			if ( !RemoveDriver(schSCManager, Name) )
+				rCode = FALSE;
 
-			rCode = TRUE;
 			break;
 
 		case MODE_START:
-			StartDriver(schSCManager, Name);
+			rCode = StartDriver(schSCManager, Name);
 
-			rCode = TRUE;
 			break;
 
 		case MODE_STOP:
-			StopDriver(schSCManager, Name);
+			rCode = StopDriver(schSCManager, Name);
 
-			rCode = TRUE;
 			break;
 
 		default:

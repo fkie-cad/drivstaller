@@ -11,8 +11,8 @@
 
 #define PARAM_IDENTIFIER ('/')
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.0")
-#define LAST_CHANGED ("19.08.2020")
+#define VERSION ("1.1.1")
+#define LAST_CHANGED ("26.03.2021")
 
 
 
@@ -43,6 +43,12 @@ BOOL
 isArgOfType(
 	_In_ CHAR* arg,
 	_In_ CHAR* type
+);
+
+BOOL hasValue(
+	char* type, 
+	int i, 
+	int end_i
 );
 
 BOOL
