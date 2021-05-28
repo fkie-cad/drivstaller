@@ -5,8 +5,8 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.1  
-Last changed: 26.03.2021
+1.1.2  
+Last changed: 28.05.2021
 
 
 ## Compile ##

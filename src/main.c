@@ -11,8 +11,8 @@
 
 #define PARAM_IDENTIFIER ('/')
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.1")
-#define LAST_CHANGED ("26.03.2021")
+#define VERSION ("1.1.2")
+#define LAST_CHANGED ("28.05.2021")
 
 
 
@@ -42,7 +42,8 @@ parseArgs(
 BOOL
 isArgOfType(
 	_In_ CHAR* arg,
-	_In_ CHAR* type
+	_In_ CHAR* type, 
+	_In_ INT n
 );
 
 BOOL hasValue(
@@ -137,7 +138,7 @@ VOID printHelp()
 		" * /u Unistall and stop the driver.\n"
 		" * /o Start the driver.\n"
 		" * /x Stop the driver.\n"
-		" * /s Service start type. 0: Boot (started by the system loader), 1: System (started by the IoInitSystem), 2: Auto (started automatically by the SCM), 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter), 4: Disabled.\n"
+		" * /s Service start type:\n\t0: Boot (started by the system loader)\n\t1: System (started by the IoInitSystem)\n\t2: Auto (started automatically by the SCM)\n\t3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n\t4: Disabled.\n"
 		" * /v Verbose output.\n"
 		"\n"
 		"The /i, /u, /o, /x options are exclusive.\n"
@@ -176,27 +177,27 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 		if ( argv[i][0] != PARAM_IDENTIFIER )
 			continue;
 
-		if ( isArgOfType(argv[i], "i") )
+		if ( isArgOfType(argv[i], "i", 1) )
 		{
 			params->mode = MODE_INSTALL;
 			mode_count++;
 		}
-		else if ( isArgOfType(argv[i], "u") )
+		else if ( isArgOfType(argv[i], "u", 1) )
 		{
 			params->mode = MODE_REMOVE;
 			mode_count++;
 		}
-		else if ( isArgOfType(argv[i], "o") )
+		else if ( isArgOfType(argv[i], "o", 1) )
 		{
 			params->mode = MODE_START;
 			mode_count++;
 		}
-		else if ( isArgOfType(argv[i], "x") )
+		else if ( isArgOfType(argv[i], "x", 1) )
 		{
 			params->mode = MODE_STOP;
 			mode_count++;
 		}
-		else if ( isArgOfType(argv[i], "s") )
+		else if ( isArgOfType(argv[i], "s", 1) )
 		{
 			if (hasValue("s", i, end_i))
 			{
@@ -204,7 +205,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 				i++;
 			}
 		}
-		else if (isArgOfType(argv[i], "v"))
+		else if (isArgOfType(argv[i], "v", 1))
 		{
 			verbose = TRUE;
 		}
@@ -218,13 +219,25 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 	{
 		fpl = GetFullPathNameA(argv[i], MAX_PATH, params->path, &params->service_name);
 		le = GetLastError();
-		params->path_size = fpl;
-		params->path[MAX_PATH - 1] = 0;
+		if ( le == ERROR_SUCCESS )
+		{
+			params->path_size = fpl;
+			params->path[MAX_PATH - 1] = 0;
+		}
+		else
+		{
+			params->path_size = 0;
+			params->path[0] = 0;
+			params->service_name = 0;
+		}
 	}
 	
-	CHAR* stream = strrchr(params->service_name, ':');
-	if ( stream )
-		params->service_name = ++stream;
+	if ( params->service_name != NULL )
+	{
+		CHAR* stream = strrchr(params->service_name, ':');
+		if ( stream )
+			params->service_name = ++stream;
+	}
 
 	if ( mode_count > 1 )
 	{
@@ -272,12 +285,14 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 		else if (params->mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
 		else if (params->mode == MODE_START) printf("mode: %s\n", "MODE_START");
 		else if (params->mode == MODE_STOP) printf("mode: %s\n", "MODE_STOP");
+		else printf("mode: %s\n", "UNKNOWN");
 
 		if (params->start_type == SERVICE_AUTO_START) printf("start type: SERVICE_AUTO_START\n");
 		else if (params->start_type == SERVICE_BOOT_START) printf("start type: SERVICE_BOOT_START\n");
 		else if (params->start_type == SERVICE_DEMAND_START) printf("start type: SERVICE_DEMAND_START\n");
 		else if (params->start_type == SERVICE_DISABLED) printf("start type: SERVICE_DISABLED\n");
 		else if (params->start_type == SERVICE_SYSTEM_START) printf("start type: SERVICE_SYSTEM_START\n");
+		else printf("start type: %s\n", "UNKNOWN");
 
 		printf("\n");
 	}
@@ -290,16 +305,26 @@ BOOL isAskForHelp(_In_ INT argc, _In_reads_(argc) CHAR** argv)
 	if ( argc < 2 )
 		return FALSE;
 
-	return isArgOfType(argv[1], "h") || isArgOfType(argv[1], "?");
+	return isArgOfType(argv[1], "h", 1) || isArgOfType(argv[1], "?", 1);
 }
 
-BOOL isArgOfType(_In_ CHAR* arg, _In_ CHAR* type)
+BOOL isArgOfType(_In_ CHAR* arg, _In_ CHAR* type, _In_ INT n)
 {
-	size_t type_ln;
+	(void)n;
+	if ( arg == NULL || arg[0] == 0 || arg[1] == 0 )
+		return FALSE;
+	return strcmp(&arg[1], type)==0;
+	//INT i;
+	//if ( arg == NULL || arg[0] == 0 || arg[1] == 0 )
+	//	return FALSE;
+	//for ( i = 0; i < n ; i++ )
+	//{
+	//	printf("%02x\n", arg[i+1]);
+	//	if ( arg[i+1] != type[i] )
+	//		return FALSE;
+	//}
 
-	type_ln = strlen(type);
-
-	return strnlen(&arg[1], 10) == type_ln && strncmp(&arg[1], type, type_ln) == 0;
+	//return TRUE;
 }
 
 BOOL hasValue(char* type, int i, int end_i)
