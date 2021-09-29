@@ -20,7 +20,11 @@ If the WDK is not installed, the `PlatformToolset` may be changed to `v142` and 
 
 ## Compile ##
 ```bash
-$devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [ /p:Configuration=Debug|Release] [/p:RunTimeLib=Debug|Release]
+$devcmd> build.bat [/prog] [/r] [/d] [/dp] [/ep] [/b 32|64] [/pdb] [/rtl] [/h]
+```
+or
+```bash
+$devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [ /p:Configuration=Debug|Release] [/p:RunTimeLib=Debug|Release] [/p:PDB=0|1]
 ```
 
 ## Run ##
