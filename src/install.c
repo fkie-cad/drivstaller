@@ -247,28 +247,3 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 	return rCode;
 
 }
-
-BOOL checkDriverPath(_In_ PCHAR name)
-{
-	HANDLE file;
-
-	file = CreateFile(
-		name,
-		GENERIC_READ,
-		0,
-		NULL,
-		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL
-	);
-
-	if ( file == INVALID_HANDLE_VALUE )
-	{
-		printf("ERROR (0x%lx): \"%s\" does not exist.\n", GetLastError(), name);
-		return FALSE;
-	}
-
-	CloseHandle(file);
-
-	return TRUE;
-}

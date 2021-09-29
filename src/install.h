@@ -16,9 +16,4 @@ ManageDriver(
     _In_ USHORT Mode
 );
 
-BOOL
-checkDriverPath(
-    _In_ PCHAR name
-);
-
 #endif

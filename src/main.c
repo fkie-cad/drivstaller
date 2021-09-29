@@ -6,23 +6,27 @@
 #include <strsafe.h>
 
 #include "install.h"
+#include "Files.h"
 
 
 
-#define PARAM_IDENTIFIER ('/')
+#define LIN_PARAM_IDENTIFIER ('/')
+#define WIN_PARAM_IDENTIFIER ('-')
+#define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
+
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.2")
-#define LAST_CHANGED ("28.05.2021")
+#define VERSION ("1.1.3")
+#define LAST_CHANGED ("29.09.2021")
 
 
 
 typedef struct CmdParams {
-	CHAR path[MAX_PATH];
-	SIZE_T path_size;
-	CHAR* service_name;
-	SIZE_T service_name_size;
-	INT mode;
-	DWORD start_type;
+    CHAR path[MAX_PATH];
+    SIZE_T path_size;
+    CHAR* service_name;
+    SIZE_T service_name_size;
+    INT mode;
+    DWORD start_type;
 } CmdParams, * PCmdParams;
 
 
@@ -35,305 +39,312 @@ printHelp();
 
 BOOL
 parseArgs(
-	_In_ INT argc, 
-	_In_reads_(argc) CHAR** argv, 
-	_Out_ CmdParams* params);
+    _In_ INT argc, 
+    _In_reads_(argc) CHAR** argv, 
+    _Out_ CmdParams* params);
 
 BOOL
 isArgOfType(
-	_In_ CHAR* arg,
-	_In_ CHAR* type, 
-	_In_ INT n
+    _In_ CHAR* arg,
+    _In_ CHAR* type
 );
 
 BOOL hasValue(
-	char* type, 
-	int i, 
-	int end_i
+    char* type, 
+    int i, 
+    int end_i
 );
 
 BOOL
 isAskForHelp(
-	_In_ INT argc,
-	_In_reads_(argc) CHAR** argv
+    _In_ INT argc,
+    _In_reads_(argc) CHAR** argv
 );
 
 
 
 INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 {
-	CmdParams params = { 0 };
-	BOOL s = TRUE;
+    CmdParams params = { 0 };
+    BOOL s = TRUE;
 
-	if ( argc < 2 )
-	{
-		printUsage();
-		return 0;
-	}
+    printf("%s - %s\n", BINARY_NAME, VERSION);
+#ifdef DEBUG_PRINT
+    printf("Compiled: %s - %s\n\n", __DATE__, __TIME__);
+#endif
 
-	if ( isAskForHelp(argc, argv) )
-	{
-		printHelp();
-		return TRUE;
-	}
+    if ( argc < 2 )
+    {
+        printUsage();
+        return 0;
+    }
 
-	if ( !parseArgs(argc, argv, &params) != 0 )
-	{
-		printUsage();
-		return 0;
-	}
+    if ( isAskForHelp(argc, argv) )
+    {
+        printHelp();
+        return TRUE;
+    }
 
-	if ( !checkDriverPath(params.path) )
-		return 1;
+    if ( !parseArgs(argc, argv, &params) != 0 )
+    {
+        printUsage();
+        return 0;
+    }
 
-	switch ( params.mode )
-	{
-		case MODE_INSTALL:
-			s = ManageDriver(params.service_name, params.path, params.start_type, MODE_INSTALL);
-			if ( !s )
-			{
-				printf("ERROR: Unable to install driver.\n");
+    if ( params.mode == MODE_INSTALL && !FileExists(params.path) )
+        return 1;
 
-				ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
-			}
-			break;
+    switch ( params.mode )
+    {
+        case MODE_INSTALL:
+            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_INSTALL);
+            if ( !s )
+            {
+                printf("ERROR: Unable to install driver.\n");
 
-		case MODE_REMOVE:
-			s = ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
-			break;
+                ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
+            }
+            break;
 
-		case MODE_START:
-			s = ManageDriver(params.service_name, params.path, params.start_type, MODE_START);
-			break;
+        case MODE_REMOVE:
+            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
+            break;
 
-		case MODE_STOP:
-			s = ManageDriver(params.service_name, params.path, params.start_type, MODE_STOP);
-			break;
+        case MODE_START:
+            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_START);
+            break;
 
-		default:
-			break;
-	}
+        case MODE_STOP:
+            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_STOP);
+            break;
 
-	if ( s )
-		printf("SUCCESS!\n");
+        default:
+            break;
+    }
 
-	return 0;
+    if ( s )
+        printf("SUCCESS!\n");
+
+    return 0;
 }
 
 VOID printUsage()
 {
-	printf("Usage: %s [options] path\\to\\driver.sys [options]\n\n", BINARY_NAME);
-	printf("Version: %s\n", VERSION);
-	printf("Last changed: %s\n", LAST_CHANGED);
+    printf("Usage: %s [options] path\\to\\driver.sys [options]\n\n", BINARY_NAME);
+    printf("Version: %s\n", VERSION);
+    printf("Last changed: %s\n", LAST_CHANGED);
 }
 
 VOID printHelp()
 {
-	printUsage();
-	printf(
-		"\n"
-		"Options:\n"
-		" * /h Print this.\n"
-		" * /i Install and start the driver.\n"
-		" * /u Unistall and stop the driver.\n"
-		" * /o Start the driver.\n"
-		" * /x Stop the driver.\n"
-		" * /s Service start type:\n\t0: Boot (started by the system loader)\n\t1: System (started by the IoInitSystem)\n\t2: Auto (started automatically by the SCM)\n\t3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n\t4: Disabled.\n"
-		" * /v Verbose output.\n"
-		"\n"
-		"The /i, /u, /o, /x options are exclusive.\n"
-		"\n"
-		"Example: %s path\\to\\drv.sys /i /s 3\n", BINARY_NAME
-	);
+    printUsage();
+    printf(
+        "\n"
+        "Options:\n"
+        " * /n Name of service. If not set, it will be derived of the driver path.\n"
+        " * /i Install and start the driver.\n"
+        " * /u Unistall and stop the driver.\n"
+        " * /o Start the driver.\n"
+        " * /x Stop the driver.\n"
+        " * /s Service start type:\n\t0: Boot (started by the system loader)\n\t1: System (started by the IoInitSystem)\n\t2: Auto (started automatically by the SCM)\n\t3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n\t4: Disabled.\n"
+        " * /v Verbose output.\n"
+        " * /h Print this.\n"
+        "\n"
+        "The /i, /u, /o, /x options are exclusive.\n"
+        "\n"
+        "Example: %s path\\to\\drv.sys /i /s 3\n", BINARY_NAME
+    );
 }
 
 BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* params)
 {
-	INT start_i = 1;
-	INT end_i = argc - 1;
-	INT i;
-	INT mode_count = 0;
-	DWORD fpl = 0;
-	DWORD le = 0;
-	BOOL error = FALSE;
-	BOOL verbose = FALSE;
+    INT start_i = 1;
+    INT i;
+    INT mode_count = 0;
+    DWORD fpl = 0;
+    DWORD le = 0;
+    BOOL error = FALSE;
+    BOOL verbose = FALSE;
+    PCHAR path = NULL;
 
-	// defaults
-	params->start_type = SERVICE_DEMAND_START;
+    // defaults
+    params->start_type = SERVICE_DEMAND_START;
 
-	// if first argument is the input file
-	if ( argv[1][0] != PARAM_IDENTIFIER )
-	{
-		fpl = GetFullPathNameA(argv[1], MAX_PATH, params->path, &params->service_name);
-		le = GetLastError();
-		params->path_size = fpl;
-		params->path[MAX_PATH - 1] = 0;
-		start_i = 2;
-		end_i = argc;
-	}
+    for ( i = start_i; i < argc; i++ )
+    {
+        //if ( argv[i][0] != PARAM_IDENTIFIER )
+        //    continue;
 
-	for ( i = start_i; i < end_i; i++ )
-	{
-		if ( argv[i][0] != PARAM_IDENTIFIER )
-			continue;
+        if ( isArgOfType(argv[i], "i") )
+        {
+            params->mode = MODE_INSTALL;
+            mode_count++;
+        }
+        else if ( isArgOfType(argv[i], "n") )
+        {
+            if ( hasValue("n", i, argc) )
+            {
+                params->service_name = argv[i+1];
+                i++;
+            }
+        }
+        else if ( isArgOfType(argv[i], "u") )
+        {
+            params->mode = MODE_REMOVE;
+            mode_count++;
+        }
+        else if ( isArgOfType(argv[i], "o") )
+        {
+            params->mode = MODE_START;
+            mode_count++;
+        }
+        else if ( isArgOfType(argv[i], "x") )
+        {
+            params->mode = MODE_STOP;
+            mode_count++;
+        }
+        else if ( isArgOfType(argv[i], "s") )
+        {
+            if (hasValue("s", i, argc))
+            {
+                params->start_type = (DWORD)strtoul(argv[i+1], NULL, 0);
+                i++;
+            }
+        }
+        else if ( isArgOfType(argv[i], "v") )
+        {
+            verbose = TRUE;
+        }
+        else
+        {
+            path = argv[i];
+        }
+    }
+    
+    if ( path )
+    {
+        if ( params->service_name == NULL )
+            fpl = GetFullPathNameA(path, MAX_PATH, params->path, &params->service_name);
+        else
+            fpl = GetFullPathNameA(path, MAX_PATH, params->path, NULL);
 
-		if ( isArgOfType(argv[i], "i", 1) )
-		{
-			params->mode = MODE_INSTALL;
-			mode_count++;
-		}
-		else if ( isArgOfType(argv[i], "u", 1) )
-		{
-			params->mode = MODE_REMOVE;
-			mode_count++;
-		}
-		else if ( isArgOfType(argv[i], "o", 1) )
-		{
-			params->mode = MODE_START;
-			mode_count++;
-		}
-		else if ( isArgOfType(argv[i], "x", 1) )
-		{
-			params->mode = MODE_STOP;
-			mode_count++;
-		}
-		else if ( isArgOfType(argv[i], "s", 1) )
-		{
-			if (hasValue("s", i, end_i))
-			{
-				params->start_type = (DWORD)strtoul(argv[i+1], NULL, 0);
-				i++;
-			}
-		}
-		else if (isArgOfType(argv[i], "v", 1))
-		{
-			verbose = TRUE;
-		}
-		else
-		{
-			printf("INFO: Unknown arg type \"%s\"\n", argv[i]);
-		}
-	}
+        le = GetLastError();
+        if ( le == ERROR_SUCCESS )
+        {
+            params->path_size = fpl;
+            params->path[MAX_PATH - 1] = 0;
+        }
+        else
+        {
+            params->path_size = 0;
+            params->path[0] = 0;
+            params->service_name = 0;
+        }
+    }
 
-	if ( start_i == 1 )
-	{
-		fpl = GetFullPathNameA(argv[i], MAX_PATH, params->path, &params->service_name);
-		le = GetLastError();
-		if ( le == ERROR_SUCCESS )
-		{
-			params->path_size = fpl;
-			params->path[MAX_PATH - 1] = 0;
-		}
-		else
-		{
-			params->path_size = 0;
-			params->path[0] = 0;
-			params->service_name = 0;
-		}
-	}
-	
-	if ( params->service_name != NULL )
-	{
-		CHAR* stream = strrchr(params->service_name, ':');
-		if ( stream )
-			params->service_name = ++stream;
-	}
+    if ( params->service_name != NULL )
+    {
+        CHAR* stream = strrchr(params->service_name, ':');
+        if ( stream )
+            params->service_name = ++stream;
+    }
 
-	if ( mode_count > 1 )
-	{
-		printf("ERROR: Selected more than 1 mode!\n");
-		error = TRUE;
-	}
-	if ( mode_count == 0 )
-	{
-		printf("ERROR: No mode selected!\n");
-		error = TRUE;
-	}
+    if ( mode_count > 1 )
+    {
+        printf("ERROR: Selected more than 1 mode!\n");
+        error = TRUE;
+    }
+    if ( mode_count == 0 )
+    {
+        printf("ERROR: No mode selected!\n");
+        error = TRUE;
+    }
 
-	if ( params->path == 0 || fpl == 0 )
-	{
-		printf("ERROR (0x%x): No driver name passed!\n", le);
-		error = TRUE;
-	}
-	if ( params->service_name == 0 )
-	{
-		printf("ERROR (0x%x): No service name found!\n", le);
-		error = TRUE;
-	}
+    if ( params->mode == MODE_INSTALL && ( params->path == 0 || fpl == 0 ) )
+    {
+        printf("ERROR (0x%x): No driver name passed!\n", le);
+        error = TRUE;
+    }
+    if ( params->service_name == 0 )
+    {
+        printf("ERROR (0x%x): No service name found!\n", le);
+        error = TRUE;
+    }
 
-	if (params->start_type != SERVICE_AUTO_START && 
-		params->start_type != SERVICE_BOOT_START && 
-		params->start_type != SERVICE_DEMAND_START && 
-		params->start_type != SERVICE_DISABLED && 
-		params->start_type != SERVICE_SYSTEM_START)
-	{
-		printf("ERROR: Unknown Service start type!\n");
-		error = TRUE;
-	}
+    if (params->start_type != SERVICE_AUTO_START && 
+        params->start_type != SERVICE_BOOT_START && 
+        params->start_type != SERVICE_DEMAND_START && 
+        params->start_type != SERVICE_DISABLED && 
+        params->start_type != SERVICE_SYSTEM_START)
+    {
+        printf("ERROR: Unknown Service start type!\n");
+        error = TRUE;
+    }
 
-	if (error)
-		return FALSE;
+    if (error)
+        return FALSE;
 
-	params->service_name_size = strnlen(params->service_name, MAX_PATH);
+    params->service_name_size = strnlen(params->service_name, MAX_PATH);
 
-	if (verbose)
-	{
-		printf("path: %s (%zu)\n", params->path, params->path_size);
-		printf("name: %s (%zu)\n", params->service_name, params->service_name_size);
+    if (verbose)
+    {
+        printf("path: %s (%zu)\n", params->path, params->path_size);
+        printf("name: %s (%zu)\n", params->service_name, params->service_name_size);
 
-		if (params->mode == MODE_INSTALL) printf("mode: %s\n", "MODE_INSTALL");
-		else if (params->mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
-		else if (params->mode == MODE_START) printf("mode: %s\n", "MODE_START");
-		else if (params->mode == MODE_STOP) printf("mode: %s\n", "MODE_STOP");
-		else printf("mode: %s\n", "UNKNOWN");
+        if (params->mode == MODE_INSTALL) printf("mode: %s\n", "MODE_INSTALL");
+        else if (params->mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
+        else if (params->mode == MODE_START) printf("mode: %s\n", "MODE_START");
+        else if (params->mode == MODE_STOP) printf("mode: %s\n", "MODE_STOP");
+        else printf("mode: %s\n", "UNKNOWN");
+        
+        if ( params->mode == MODE_INSTALL )
+        {
+            if (params->start_type == SERVICE_AUTO_START) printf("start type: SERVICE_AUTO_START\n");
+            else if (params->start_type == SERVICE_BOOT_START) printf("start type: SERVICE_BOOT_START\n");
+            else if (params->start_type == SERVICE_DEMAND_START) printf("start type: SERVICE_DEMAND_START\n");
+            else if (params->start_type == SERVICE_DISABLED) printf("start type: SERVICE_DISABLED\n");
+            else if (params->start_type == SERVICE_SYSTEM_START) printf("start type: SERVICE_SYSTEM_START\n");
+            else printf("start type: %s\n", "UNKNOWN");
+        }
+        printf("\n");
+    }
 
-		if (params->start_type == SERVICE_AUTO_START) printf("start type: SERVICE_AUTO_START\n");
-		else if (params->start_type == SERVICE_BOOT_START) printf("start type: SERVICE_BOOT_START\n");
-		else if (params->start_type == SERVICE_DEMAND_START) printf("start type: SERVICE_DEMAND_START\n");
-		else if (params->start_type == SERVICE_DISABLED) printf("start type: SERVICE_DISABLED\n");
-		else if (params->start_type == SERVICE_SYSTEM_START) printf("start type: SERVICE_SYSTEM_START\n");
-		else printf("start type: %s\n", "UNKNOWN");
-
-		printf("\n");
-	}
-
-	return TRUE;
+    return TRUE;
 }
 
 BOOL isAskForHelp(_In_ INT argc, _In_reads_(argc) CHAR** argv)
 {
-	if ( argc < 2 )
-		return FALSE;
+    if ( argc < 2 )
+        return FALSE;
 
-	return isArgOfType(argv[1], "h", 1) || isArgOfType(argv[1], "?", 1);
+    return isArgOfType(argv[1], "h") || isArgOfType(argv[1], "?");
 }
 
-BOOL isArgOfType(_In_ CHAR* arg, _In_ CHAR* type, _In_ INT n)
+BOOL isArgOfType(_In_ CHAR* arg, _In_ CHAR* type)
 {
-	(void)n;
-	if ( arg == NULL || arg[0] == 0 || arg[1] == 0 )
-		return FALSE;
-	return strcmp(&arg[1], type)==0;
-	//INT i;
-	//if ( arg == NULL || arg[0] == 0 || arg[1] == 0 )
-	//	return FALSE;
-	//for ( i = 0; i < n ; i++ )
-	//{
-	//	printf("%02x\n", arg[i+1]);
-	//	if ( arg[i+1] != type[i] )
-	//		return FALSE;
-	//}
+    if ( arg == NULL || ( arg[0] != LIN_PARAM_IDENTIFIER && arg[0] != WIN_PARAM_IDENTIFIER ) || arg[1] == 0 )
+        return FALSE;
+    return strcmp(&arg[1], type)==0;
+    //INT i;
+    //if ( arg == NULL || arg[0] == 0 || arg[1] == 0 )
+    //	return FALSE;
+    //for ( i = 0; i < n ; i++ )
+    //{
+    //	printf("%02x\n", arg[i+1]);
+    //	if ( arg[i+1] != type[i] )
+    //		return FALSE;
+    //}
 
-	//return TRUE;
+    //return TRUE;
 }
 
 BOOL hasValue(char* type, int i, int end_i)
 {
-	if (i >= end_i)
-	{
-		printf("INFO: Arg \"%c%s\" has no value! Skipped!\n", PARAM_IDENTIFIER, type);
-		return FALSE;
-	}
+    if (i >= end_i)
+    {
+        printf("INFO: Arg \"%c%s\" has no value! Skipped!\n", PARAM_IDENTIFIER, type);
+        return FALSE;
+    }
 
-	return TRUE;
+    return TRUE;
 }
