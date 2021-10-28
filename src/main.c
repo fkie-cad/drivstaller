@@ -85,7 +85,7 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
         return TRUE;
     }
 
-    if ( !parseArgs(argc, argv, &params) != 0 )
+    if ( !parseArgs(argc, argv, &params) )
     {
         printUsage();
         return 0;

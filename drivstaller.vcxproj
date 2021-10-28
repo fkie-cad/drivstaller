@@ -34,6 +34,7 @@
     <PlatformToolset>WindowsApplicationForDrivers10.0</PlatformToolset>
     <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
+  
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)'=='Release'">
     <UseDebugLibraries>False</UseDebugLibraries>
   </PropertyGroup>
@@ -82,6 +83,7 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);;</AdditionalIncludeDirectories>
       <ExceptionHandling></ExceptionHandling>
       <PrecompiledHeader></PrecompiledHeader>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks> <!-- /RTC -->
       <!--<FunctionLevelLinking>true</FunctionLevelLinking>-->
       <!--<IntrinsicFunctions>true</IntrinsicFunctions>-->
       <!--<PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>-->
@@ -94,6 +96,7 @@
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);;</AdditionalIncludeDirectories>
     </Midl>
   </ItemDefinitionGroup>
+  
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -104,6 +107,7 @@
       <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
+  
   <ItemDefinitionGroup Condition="'$(RunTimeLib)'=='Release'">
     <ClCompile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -114,26 +118,35 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(PDB)'=='no'">
+  
+  <ItemDefinitionGroup Condition="'$(PDB)'!='1'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
+      <AdditionalOptions>/NOCOFFGRPINFO %(AdditionalOptions)</AdditionalOptions>
     </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(DebugPrint)'!='0' And '$(DebugPrint)'!=''">
+    <ClCompile>
+      <PreprocessorDefinitions>DEBUG_PRINT=$(DebugPrint);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(ErrorPrint)'=='1'">
+    <ClCompile>
+      <PreprocessorDefinitions>ERROR_PRINT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   
   <ItemGroup>
     <ClCompile Include="src\install.c" />
     <ClCompile Include="src\main.c" />
   </ItemGroup>
-  <ItemGroup>
-    <None Exclude="@(None)" Include="*.ico;*.cur;*.bmp;*.dlg;*.rct;*.gif;*.jpg;*.jpeg;*.wav;*.jpe;*.tiff;*.tif;*.png;*.rc2" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Exclude="@(ClInclude)" Include="*.h;*.hpp;*.hxx;*.hm;*.inl;*.xsd" />
-  </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 	
   <Target Name="DisplayMessages" AfterTargets="Build">

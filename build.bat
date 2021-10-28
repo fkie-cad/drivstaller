@@ -22,10 +22,10 @@ set /a EP_FLAG=2
 set /a IP_FLAG=4
 
 
-set msb=msbuild
+::set msb=msbuild
 
-WHERE %msbuild% >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 set msb="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
+::WHERE %msbuild% >nul 2>nul
+::IF %ERRORLEVEL% NEQ 0 set msb="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
 
 
 
@@ -53,20 +53,24 @@ GOTO :ParseParams
     )
 
     IF "%~1"=="/dp" (
-        SET /a "debug_print=%debug_print%+DP_FLAG"
+        SET /a "debug_print=%debug_print%|DP_FLAG"
         goto reParseParams
     )
     IF "%~1"=="/ep" (
-        SET /a "debug_print=%debug_print%+EP_FLAG"
+        SET /a "debug_print=%debug_print%|EP_FLAG"
         goto reParseParams
     )
     IF "%~1"=="/ip" (
-        SET /a "debug_print=%debug_print%+IP_FLAG"
+        SET /a "debug_print=%debug_print%|IP_FLAG"
         goto reParseParams
     )
 
     IF /i "%~1"=="/pdb" (
         SET /a pdb=1
+        goto reParseParams
+    )
+    IF /i "%~1"=="/rtl" (
+        SET /a rtl=1
         goto reParseParams
     )
 

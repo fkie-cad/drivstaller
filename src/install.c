@@ -220,14 +220,23 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 	BOOL rCode = TRUE;
 	SC_HANDLE schService;
 	SERVICE_STATUS serviceStatus;
+	ULONG le;
 
 	schService = OpenService(SchSCManager, Name, SERVICE_ALL_ACCESS);
 
 	if ( schService == NULL )
 	{
-		printf("ERROR (0x%x): OpenService failed!\n", GetLastError());
-
-		return FALSE;
+		le = GetLastError();
+		if ( le == ERROR_SERVICE_DOES_NOT_EXIST )
+		{
+			printf("Service does not exist.\n");
+			return TRUE;
+		}
+		else
+		{
+			printf("ERROR (0x%x): OpenService failed!\n", le);
+			return FALSE;
+		}
 	}
 
 	if ( ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus) )
@@ -236,9 +245,17 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 	}
 	else
 	{
-		printf("ERROR (0x%x): ControlService (stop) failed!\n", GetLastError());
-
-		rCode = FALSE;
+		le = GetLastError();
+		if ( le == ERROR_SERVICE_NOT_ACTIVE )
+		{
+			printf("Service not active.\n");
+			rCode = TRUE;
+		}
+		else
+		{
+			printf("ERROR (0x%x): ControlService (stop) failed!\n", le);
+			rCode = FALSE;
+		}
 	}
 
 	if ( schService )
