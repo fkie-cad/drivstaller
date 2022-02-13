@@ -10,25 +10,25 @@ BOOL FileExists(
 );
 
 BOOL DirExists(
-	PCHAR szPath
+    PCHAR szPath
 );
 
 
 
 BOOL FileExists(PCHAR szPath)
 {
-	DWORD dwAttrib = GetFileAttributesA(szPath);
+    DWORD dwAttrib = GetFileAttributesA(szPath);
 
-	return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
-			!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
+            !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 BOOL DirExists(PCHAR szPath)
 {
-	DWORD dwAttrib = GetFileAttributesA(szPath);
+    DWORD dwAttrib = GetFileAttributesA(szPath);
 
-	return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
-			(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
+            (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 #endif 

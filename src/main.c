@@ -5,6 +5,8 @@
 #include <string.h>
 #include <strsafe.h>
 
+#pragma warning ( disable : 4996 )
+
 #include "install.h"
 #include "Files.h"
 
@@ -23,7 +25,7 @@
 typedef struct CmdParams {
     CHAR path[MAX_PATH];
     SIZE_T path_size;
-    CHAR* service_name;
+    CHAR service_name[MAX_PATH];
     SIZE_T service_name_size;
     INT mode;
     DWORD start_type;
@@ -68,10 +70,7 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     CmdParams params = { 0 };
     BOOL s = TRUE;
 
-    printf("%s - %s\n", BINARY_NAME, VERSION);
-#ifdef DEBUG_PRINT
-    printf("Compiled: %s - %s\n\n", __DATE__, __TIME__);
-#endif
+    printf("%s - %s\n\n", BINARY_NAME, VERSION);
 
     if ( argc < 2 )
     {
@@ -97,6 +96,7 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     switch ( params.mode )
     {
         case MODE_INSTALL:
+            //printf("Installing %s\n", params.path);
             s = ManageDriver(params.service_name, params.path, params.start_type, MODE_INSTALL);
             if ( !s )
             {
@@ -107,14 +107,17 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
             break;
 
         case MODE_REMOVE:
+            //printf("Removing %s\n", params.path);
             s = ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
             break;
 
         case MODE_START:
+            //printf("Starting %s\n", params.path);
             s = ManageDriver(params.service_name, params.path, params.start_type, MODE_START);
             break;
 
         case MODE_STOP:
+            //printf("Stopping %s\n", params.path);
             s = ManageDriver(params.service_name, params.path, params.start_type, MODE_STOP);
             break;
 
@@ -133,6 +136,7 @@ VOID printUsage()
     printf("Usage: %s [options] path\\to\\driver.sys [options]\n\n", BINARY_NAME);
     printf("Version: %s\n", VERSION);
     printf("Last changed: %s\n", LAST_CHANGED);
+    printf("Compiled: %s - %s\n", __DATE__, __TIME__);
 }
 
 VOID printHelp()
@@ -184,7 +188,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
         {
             if ( hasValue("n", i, argc) )
             {
-                params->service_name = argv[i+1];
+                strcpy(params->service_name, argv[i+1]);
                 i++;
             }
         }
@@ -221,13 +225,18 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
         }
     }
     
+    PCHAR bname = NULL;
     if ( path )
     {
-        if ( params->service_name == NULL )
-            fpl = GetFullPathNameA(path, MAX_PATH, params->path, &params->service_name);
+        if ( params->service_name[0] == 0 )
+        {
+            fpl = GetFullPathNameA(path, MAX_PATH, params->path, &bname);
+            strcpy(params->service_name, bname);
+        }
         else
+        {
             fpl = GetFullPathNameA(path, MAX_PATH, params->path, NULL);
-
+        }
         le = GetLastError();
         if ( le == ERROR_SUCCESS )
         {
@@ -238,15 +247,35 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
         {
             params->path_size = 0;
             params->path[0] = 0;
-            params->service_name = 0;
+            params->service_name[0] = 0;
+            params->service_name_size = 0;
         }
     }
 
-    if ( params->service_name != NULL )
+    if ( params->service_name[0] != 0 )
     {
-        CHAR* stream = strrchr(params->service_name, ':');
+        CHAR* stream = NULL;
+        if (bname) 
+            stream = strrchr(bname, ':');
+
         if ( stream )
-            params->service_name = ++stream;
+        {
+            strcpy(params->service_name, ++stream);
+            params->service_name_size = strlen(params->service_name);
+        }
+        else
+        {
+            params->service_name_size = strlen(params->service_name);
+            // remove ".sys"
+            if ( params->service_name_size > 4 )
+            {
+                if ( *(ULONG*)&params->service_name[params->service_name_size-4] == 0x7379732e )
+                {
+                    params->service_name_size -= 4;
+                    params->service_name[params->service_name_size] = 0;
+                }
+            }
+        }
     }
 
     if ( mode_count > 1 )
@@ -265,7 +294,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
         printf("ERROR (0x%x): No driver name passed!\n", le);
         error = TRUE;
     }
-    if ( params->service_name == 0 )
+    if ( params->service_name[0] == 0 )
     {
         printf("ERROR (0x%x): No service name found!\n", le);
         error = TRUE;
@@ -283,8 +312,6 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 
     if (error)
         return FALSE;
-
-    params->service_name_size = strnlen(params->service_name, MAX_PATH);
 
     if (verbose)
     {

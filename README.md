@@ -31,22 +31,22 @@ $devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [ /p:Configuration=De
 ### Examples ###
 Install and start a driver:
 ```bash
-$ drivstaller a\driver.sys /i /s 3
+$ drivstaller driver.sys /i /s 3
 ```
 
 Remove and stop a driver:
 ```bash
-$ drivstaller a\driver.sys /u
+$ drivstaller driver.sys /u
 ```
 
 Just start an already installed driver:
 ```bash
-$ drivstaller a\driver.sys /o
+$ drivstaller driver.sys /o
 ```
 
 Just stop an already installed driver:
 ```bash
-$ drivstaller a\driver.sys /x
+$ drivstaller driver.sys /x
 ```
 ### Options ###
 * /n Name of service. If not set, it will be derived of the driver path.

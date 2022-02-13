@@ -22,12 +22,7 @@ set /a EP_FLAG=2
 set /a IP_FLAG=4
 
 
-::set msb=msbuild
-
-::WHERE %msbuild% >nul 2>nul
-::IF %ERRORLEVEL% NEQ 0 set msb="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe"
-
-
+if [%1]==[] goto help
 
 GOTO :ParseParams
 
@@ -38,29 +33,29 @@ GOTO :ParseParams
     if [%1]==[/h] goto help
     if [%1]==[/help] goto help
 
-    IF "%~1"=="/prog" (
+    IF /i "%~1"=="/ds" (
         SET /a prog=1
         goto reParseParams
     )
 
-    IF "%~1"=="/d" (
+    IF /i "%~1"=="/d" (
         SET /a debug=1
         goto reParseParams
     )
-    IF "%~1"=="/r" (
+    IF /i "%~1"=="/r" (
         SET /a release=1
         goto reParseParams
     )
 
-    IF "%~1"=="/dp" (
+    IF /i "%~1"=="/dp" (
         SET /a "debug_print=%debug_print%|DP_FLAG"
         goto reParseParams
     )
-    IF "%~1"=="/ep" (
+    IF /i "%~1"=="/ep" (
         SET /a "debug_print=%debug_print%|EP_FLAG"
         goto reParseParams
     )
-    IF "%~1"=="/ip" (
+    IF /i "%~1"=="/ip" (
         SET /a "debug_print=%debug_print%|IP_FLAG"
         goto reParseParams
     )
@@ -74,10 +69,12 @@ GOTO :ParseParams
         goto reParseParams
     )
 
-    IF "%~1"=="/b" (
+    IF /i "%~1"=="/b" (
         SET /a bitness=%~2
         SHIFT
         goto reParseParams
+    ) ELSE (
+        echo Unknown option : "%~1"
     )
     
     :reParseParams
@@ -187,15 +184,15 @@ exit /B 0
 
 
 :usage
-    echo Usage: %prog_name% [/prog] [/d] [/r] [/dp] [/ep] [/b 32^|64] [/pdb] [/rtl]
-    echo Default: %prog_name% [/prog /r /b 64]
+    echo Usage: %prog_name% [/ds] [/d] [/r] [/dp] [/ep] [/b 32^|64] [/pdb] [/rtl]
+    echo Default: %prog_name% [/ds /r /b 64]
     exit /B 0
     
 :help
     call :usage
     echo.
     echo Targets:
-    echo /prog: Build Drivstaller.
+    echo /ds: Build Drivstaller.
     echo.
     echo Options:
     echo /d: Build in debug mode.
