@@ -13,6 +13,7 @@ ManageDriver(
     _In_ LPCTSTR Name,
     _In_ LPCTSTR ServiceExe,
     _In_ DWORD StartType,
+    _In_ PCHAR Dependencies,
     _In_ USHORT Mode
 );
 

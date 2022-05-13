@@ -6,6 +6,8 @@
 
 #include "install.h"
 
+#pragma warning( disable : 4995 )
+
 
 
 BOOL
@@ -13,7 +15,8 @@ InstallDriver(
     _In_ SC_HANDLE SchSCManager,
     _In_ LPCTSTR Name,
     _In_ LPCTSTR ServiceExe,
-    _In_ DWORD StartType
+    _In_ DWORD StartType,
+    _In_ PCHAR Dependencies
 );
 
 
@@ -37,7 +40,7 @@ StopDriver(
 
 
 
-BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_ USHORT Mode)
+BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_ PCHAR Dependencies, _In_ USHORT Mode)
 {
     SC_HANDLE   schSCManager;
     BOOL rCode = TRUE;
@@ -65,7 +68,7 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
     switch ( Mode )
     {
         case MODE_INSTALL:
-            if ( InstallDriver(schSCManager, Name, ServiceExe, StartType) )
+            if ( InstallDriver(schSCManager, Name, ServiceExe, StartType, Dependencies) )
             {
                 //if ( StartType == SERVICE_AUTO_START ||
                 //     StartType == SERVICE_BOOT_START ||
@@ -112,7 +115,7 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
 /**
  * Install the driver
  */
-BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType)
+BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_ PCHAR Dependencies)
 {
     SC_HANDLE schService;
     DWORD err;
@@ -121,18 +124,19 @@ BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR 
 
     // Creates an entry for a standalone driver. 
     // May be extended later.
-    schService = CreateService(
+    schService = CreateServiceA(
         SchSCManager,           // handle of service control manager database
         Name,             // address of name of service to start
         Name,             // address of display name
         SERVICE_ALL_ACCESS,     // type of access to service
         SERVICE_KERNEL_DRIVER,  // type of service
-        StartType,   // when to start service
+        StartType,              // when to start service
         SERVICE_ERROR_NORMAL,   // severity if service fails to start
         ServiceExe,             // address of name of binary file
         NULL,                   // service does not belong to a group
         NULL,                   // no tag requested
-        NULL,                   // no dependency names
+        Dependencies,           // A pointer to a double null-terminated array of null-separated names of services or load ordering groups that the system must start before this service. Specify NULL or an empty string if the service has no dependencies. Dependency on a group means that this service can run if at least one member of the group is running after an attempt to start all members of the group.
+                                // You must prefix group names with SC_GROUP_IDENTIFIER so that they can be distinguished from a service name, because services and service groups share the same name space.
         NULL,                   // use LocalSystem account
         NULL                    // no password for service account
     );

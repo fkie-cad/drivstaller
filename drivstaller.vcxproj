@@ -29,7 +29,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   
   <PropertyGroup Label="Configuration">
-    <TargetVersion>Windows10</TargetVersion>
+    <TargetVersion>Windows7</TargetVersion>
+    <!-- <TargetVersion>Windows10</TargetVersion> -->
     <TargetPlatform>Desktop</TargetPlatform>
     <PlatformToolset>WindowsApplicationForDrivers10.0</PlatformToolset>
     <ConfigurationType>Application</ConfigurationType>

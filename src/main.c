@@ -17,19 +17,22 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.3")
-#define LAST_CHANGED ("29.09.2021")
+#define VERSION ("1.1.4")
+#define LAST_CHANGED ("13.05.2022")
 
 
 
-typedef struct CmdParams {
-    CHAR path[MAX_PATH];
-    SIZE_T path_size;
-    CHAR service_name[MAX_PATH];
-    SIZE_T service_name_size;
-    INT mode;
-    DWORD start_type;
-} CmdParams, * PCmdParams;
+typedef struct _CMD_PARAMS {
+    CHAR Path[MAX_PATH];
+    SIZE_T PathSize;
+    CHAR ServiceName[MAX_PATH];
+    SIZE_T ServiceNameSize;
+    PCHAR Dependencies;
+    ULONG DependenciesSize;
+    ULONG NrOfDependencies;
+    INT Mode;
+    DWORD StartType;
+} CMD_PARAMS, *PCMD_PARAMS;
 
 
 
@@ -43,7 +46,16 @@ BOOL
 parseArgs(
     _In_ INT argc, 
     _In_reads_(argc) CHAR** argv, 
-    _Out_ CmdParams* params);
+    _Out_ CMD_PARAMS* params);
+
+INT 
+parseDependencies(
+    _In_ INT argc, 
+    _In_reads_(argc) CHAR** argv, 
+    _Inout_ CMD_PARAMS* params, 
+    _In_ PINT DependencyIds, 
+    _In_ INT DependencyIdsCount
+);
 
 BOOL
 isArgOfType(
@@ -67,7 +79,7 @@ isAskForHelp(
 
 INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 {
-    CmdParams params = { 0 };
+    CMD_PARAMS params = { 0 };
     BOOL s = TRUE;
 
     printf("%s - %s\n\n", BINARY_NAME, VERSION);
@@ -90,35 +102,35 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
         return 0;
     }
 
-    if ( params.mode == MODE_INSTALL && !FileExists(params.path) )
+    if ( params.Mode == MODE_INSTALL && !FileExists(params.Path) )
         return 1;
 
-    switch ( params.mode )
+    switch ( params.Mode )
     {
         case MODE_INSTALL:
-            //printf("Installing %s\n", params.path);
-            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_INSTALL);
+            //printf("Installing %s\n", params.Path);
+            s = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies, MODE_INSTALL);
             if ( !s )
             {
                 printf("ERROR: Unable to install driver.\n");
 
-                ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
+                ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE);
             }
             break;
 
         case MODE_REMOVE:
-            //printf("Removing %s\n", params.path);
-            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_REMOVE);
+            //printf("Removing %s\n", params.Path);
+            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE);
             break;
 
         case MODE_START:
-            //printf("Starting %s\n", params.path);
-            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_START);
+            //printf("Starting %s\n", params.Path);
+            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_START);
             break;
 
         case MODE_STOP:
-            //printf("Stopping %s\n", params.path);
-            s = ManageDriver(params.service_name, params.path, params.start_type, MODE_STOP);
+            //printf("Stopping %s\n", params.Path);
+            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP);
             break;
 
         default:
@@ -127,6 +139,9 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 
     if ( s )
         printf("SUCCESS!\n");
+
+    if ( params.Dependencies )
+        free(params.Dependencies);
 
     return 0;
 }
@@ -151,6 +166,7 @@ VOID printHelp()
         " * /o Start the driver.\n"
         " * /x Stop the driver.\n"
         " * /s Service start type:\n\t0: Boot (started by the system loader)\n\t1: System (started by the IoInitSystem)\n\t2: Auto (started automatically by the SCM)\n\t3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n\t4: Disabled.\n"
+        " * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.\n"
         " * /v Verbose output.\n"
         " * /h Print this.\n"
         "\n"
@@ -160,7 +176,7 @@ VOID printHelp()
     );
 }
 
-BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* params)
+BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* params)
 {
     INT start_i = 1;
     INT i;
@@ -170,9 +186,11 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
     BOOL error = FALSE;
     BOOL verbose = FALSE;
     PCHAR path = NULL;
+    INT depIds[0x10] = {0};
+    INT depIdsCount = 0;
 
     // defaults
-    params->start_type = SERVICE_DEMAND_START;
+    params->StartType = SERVICE_DEMAND_START;
 
     for ( i = start_i; i < argc; i++ )
     {
@@ -181,37 +199,53 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 
         if ( isArgOfType(argv[i], "i") )
         {
-            params->mode = MODE_INSTALL;
+            params->Mode = MODE_INSTALL;
             mode_count++;
         }
         else if ( isArgOfType(argv[i], "n") )
         {
             if ( hasValue("n", i, argc) )
             {
-                strcpy(params->service_name, argv[i+1]);
+                strcpy(params->ServiceName, argv[i+1]);
                 i++;
             }
         }
         else if ( isArgOfType(argv[i], "u") )
         {
-            params->mode = MODE_REMOVE;
+            params->Mode = MODE_REMOVE;
             mode_count++;
         }
         else if ( isArgOfType(argv[i], "o") )
         {
-            params->mode = MODE_START;
+            params->Mode = MODE_START;
             mode_count++;
         }
         else if ( isArgOfType(argv[i], "x") )
         {
-            params->mode = MODE_STOP;
+            params->Mode = MODE_STOP;
             mode_count++;
         }
         else if ( isArgOfType(argv[i], "s") )
         {
             if (hasValue("s", i, argc))
             {
-                params->start_type = (DWORD)strtoul(argv[i+1], NULL, 0);
+                params->StartType = (DWORD)strtoul(argv[i+1], NULL, 0);
+                i++;
+            }
+        }
+        else if ( isArgOfType(argv[i], "d") )
+        {
+            if (hasValue("d", i, argc))
+            {
+                if ( depIdsCount < 0x10 )
+                {
+                    depIds[depIdsCount] = i+1;
+                    depIdsCount++;
+                }
+                else
+                {
+                    printf("Maximum number of dependencies reached!");
+                }
                 i++;
             }
         }
@@ -224,35 +258,37 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
             path = argv[i];
         }
     }
+
+    parseDependencies(argc, argv, params, depIds, depIdsCount);
     
     PCHAR bname = NULL;
     if ( path )
     {
-        if ( params->service_name[0] == 0 )
+        if ( params->ServiceName[0] == 0 )
         {
-            fpl = GetFullPathNameA(path, MAX_PATH, params->path, &bname);
-            strcpy(params->service_name, bname);
+            fpl = GetFullPathNameA(path, MAX_PATH, params->Path, &bname);
+            strcpy(params->ServiceName, bname);
         }
         else
         {
-            fpl = GetFullPathNameA(path, MAX_PATH, params->path, NULL);
+            fpl = GetFullPathNameA(path, MAX_PATH, params->Path, NULL);
         }
         le = GetLastError();
         if ( le == ERROR_SUCCESS )
         {
-            params->path_size = fpl;
-            params->path[MAX_PATH - 1] = 0;
+            params->PathSize = fpl;
+            params->Path[MAX_PATH - 1] = 0;
         }
         else
         {
-            params->path_size = 0;
-            params->path[0] = 0;
-            params->service_name[0] = 0;
-            params->service_name_size = 0;
+            params->PathSize = 0;
+            params->Path[0] = 0;
+            params->ServiceName[0] = 0;
+            params->ServiceNameSize = 0;
         }
     }
 
-    if ( params->service_name[0] != 0 )
+    if ( params->ServiceName[0] != 0 )
     {
         CHAR* stream = NULL;
         if (bname) 
@@ -260,19 +296,19 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 
         if ( stream )
         {
-            strcpy(params->service_name, ++stream);
-            params->service_name_size = strlen(params->service_name);
+            strcpy(params->ServiceName, ++stream);
+            params->ServiceNameSize = strlen(params->ServiceName);
         }
         else
         {
-            params->service_name_size = strlen(params->service_name);
+            params->ServiceNameSize = strlen(params->ServiceName);
             // remove ".sys"
-            if ( params->service_name_size > 4 )
+            if ( params->ServiceNameSize > 4 )
             {
-                if ( *(ULONG*)&params->service_name[params->service_name_size-4] == 0x7379732e )
+                if ( *(ULONG*)&params->ServiceName[params->ServiceNameSize-4] == 0x7379732e )
                 {
-                    params->service_name_size -= 4;
-                    params->service_name[params->service_name_size] = 0;
+                    params->ServiceNameSize -= 4;
+                    params->ServiceName[params->ServiceNameSize] = 0;
                 }
             }
         }
@@ -289,22 +325,22 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
         error = TRUE;
     }
 
-    if ( params->mode == MODE_INSTALL && ( params->path == 0 || fpl == 0 ) )
+    if ( params->Mode == MODE_INSTALL && ( params->Path == 0 || fpl == 0 ) )
     {
         printf("ERROR (0x%x): No driver name passed!\n", le);
         error = TRUE;
     }
-    if ( params->service_name[0] == 0 )
+    if ( params->ServiceName[0] == 0 )
     {
         printf("ERROR (0x%x): No service name found!\n", le);
         error = TRUE;
     }
 
-    if (params->start_type != SERVICE_AUTO_START && 
-        params->start_type != SERVICE_BOOT_START && 
-        params->start_type != SERVICE_DEMAND_START && 
-        params->start_type != SERVICE_DISABLED && 
-        params->start_type != SERVICE_SYSTEM_START)
+    if (params->StartType != SERVICE_AUTO_START && 
+        params->StartType != SERVICE_BOOT_START && 
+        params->StartType != SERVICE_DEMAND_START && 
+        params->StartType != SERVICE_DISABLED && 
+        params->StartType != SERVICE_SYSTEM_START)
     {
         printf("ERROR: Unknown Service start type!\n");
         error = TRUE;
@@ -315,28 +351,109 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CmdParams* par
 
     if (verbose)
     {
-        printf("path: %s (%zu)\n", params->path, params->path_size);
-        printf("name: %s (%zu)\n", params->service_name, params->service_name_size);
+        printf("path: %s (%zu)\n", params->Path, params->PathSize);
+        printf("name: %s (%zu)\n", params->ServiceName, params->ServiceNameSize);
 
-        if (params->mode == MODE_INSTALL) printf("mode: %s\n", "MODE_INSTALL");
-        else if (params->mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
-        else if (params->mode == MODE_START) printf("mode: %s\n", "MODE_START");
-        else if (params->mode == MODE_STOP) printf("mode: %s\n", "MODE_STOP");
+        if (params->Mode == MODE_INSTALL) printf("mode: %s\n", "MODE_INSTALL");
+        else if (params->Mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
+        else if (params->Mode == MODE_START) printf("mode: %s\n", "MODE_START");
+        else if (params->Mode == MODE_STOP) printf("mode: %s\n", "MODE_STOP");
         else printf("mode: %s\n", "UNKNOWN");
         
-        if ( params->mode == MODE_INSTALL )
+        if ( params->Mode == MODE_INSTALL )
         {
-            if (params->start_type == SERVICE_AUTO_START) printf("start type: SERVICE_AUTO_START\n");
-            else if (params->start_type == SERVICE_BOOT_START) printf("start type: SERVICE_BOOT_START\n");
-            else if (params->start_type == SERVICE_DEMAND_START) printf("start type: SERVICE_DEMAND_START\n");
-            else if (params->start_type == SERVICE_DISABLED) printf("start type: SERVICE_DISABLED\n");
-            else if (params->start_type == SERVICE_SYSTEM_START) printf("start type: SERVICE_SYSTEM_START\n");
+            if (params->StartType == SERVICE_AUTO_START) printf("start type: SERVICE_AUTO_START\n");
+            else if (params->StartType == SERVICE_BOOT_START) printf("start type: SERVICE_BOOT_START\n");
+            else if (params->StartType == SERVICE_DEMAND_START) printf("start type: SERVICE_DEMAND_START\n");
+            else if (params->StartType == SERVICE_DISABLED) printf("start type: SERVICE_DISABLED\n");
+            else if (params->StartType == SERVICE_SYSTEM_START) printf("start type: SERVICE_SYSTEM_START\n");
             else printf("start type: %s\n", "UNKNOWN");
         }
+
+        if ( params->NrOfDependencies > 0 )
+        {
+            printf("Dependencies (%u):\n", params->NrOfDependencies);
+            ULONG offset = 0;
+            for ( i = 0; i < (INT)params->NrOfDependencies; i++ )
+            {
+                printf(" [%u] %s\n", (i+1), &params->Dependencies[offset]);
+                offset += (ULONG)strlen(&params->Dependencies[offset]) + 1;
+            }
+        }
+
         printf("\n");
     }
 
     return TRUE;
+}
+
+INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ CMD_PARAMS* params, _In_ PINT DependencyIds, _In_ INT DependencyIdsCount)
+{
+    INT i;
+    PCHAR arg = NULL;
+    SIZE_T reqSize = 0;
+    SIZE_T offset;
+    ULONG count = 0;
+
+    for ( i = 0; i < DependencyIdsCount; i++ )
+    {
+        if ( DependencyIds[i] >= argc )
+        {
+            DependencyIds[i] = -1;
+            continue;
+        }
+
+        arg = argv[DependencyIds[i]];
+
+        if ( arg == NULL || arg[0] == 0 || arg[0] == LIN_PARAM_IDENTIFIER || arg[0] == WIN_PARAM_IDENTIFIER )
+        {
+            DependencyIds[i] = -1;
+            continue;
+        }
+
+        reqSize += strlen(arg) + 1; // string terminating 0
+        count++;
+    }
+
+    if ( reqSize == 0 )
+        return -1;
+    
+    // dependencies array terminating 0
+    // + one extra 0 for wrong implementations
+    reqSize += 2;
+
+    if ( reqSize > ULONG_MAX )
+        return -1;
+
+    params->Dependencies = (PCHAR)malloc(reqSize);
+    if ( !params->Dependencies )
+        return -1;
+
+    params->NrOfDependencies = count;
+    params->DependenciesSize = (ULONG)reqSize;
+
+    offset = 0;
+    for ( i = 0; i < DependencyIdsCount; i++ )
+    {
+        if ( DependencyIds[i] == -1)
+        {
+            continue;
+        }
+        
+        arg = argv[DependencyIds[i]];
+
+        reqSize = strlen(arg);
+
+        memcpy(&params->Dependencies[offset], arg, reqSize);
+        offset += reqSize;
+        params->Dependencies[offset] = 0; // terminate string
+        offset++;
+    }
+    params->Dependencies[offset] = 0; // terminate array
+    offset++;
+    params->Dependencies[offset] = 0; // extra termination
+
+    return 0;
 }
 
 BOOL isAskForHelp(_In_ INT argc, _In_reads_(argc) CHAR** argv)

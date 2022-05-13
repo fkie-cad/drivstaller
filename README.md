@@ -5,27 +5,27 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.3  
-Last changed: 29.09.2021
+1.1.4  
+Last changed: 13.05.2022
 
 
 ## REQUIREMENTS ##
 - msbuild
-- [wdk]
-
-**Remarks**  
-The .vcxproj file is using `WindowsApplicationForDrivers10.0` as the `PlatformToolset`, which leads to smaller builds. 
-If the WDK is not installed, the `PlatformToolset` may be changed to `v142` and it should compile without errors.
 
 
 ## Compile ##
 ```bash
-$devcmd> build.bat [/prog] [/r] [/d] [/dp] [/ep] [/b 32|64] [/pdb] [/rtl] [/h]
+$devcmd> build.bat [/ds] [/r] [/d] [/dp] [/ep] [/b 32|64] [/pdb] [/rtl] [/pts <toolset>] [/h]
 ```
 or
 ```bash
-$devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [ /p:Configuration=Debug|Release] [/p:RunTimeLib=Debug|Release] [/p:PDB=0|1]
+$devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [/p:Configuration=Debug|Release] [/p:RunTimeLib=Debug|Release] [/p:PDB=0|1] [/p:PlatformToolset=<v142|v143|WindowsApplicationForDrivers10.0>]
 ```
+
+The PlatformToolset defaults to "v142", but may be changed with the `/pts` option.
+"v142" is used for VS 2019 version, "v143" would be used in VS 2022, 
+or you could also use "WindowsApplicationForDrivers10.0" with WDK10 installed.
+
 
 ## Run ##
 ### Examples ###
@@ -60,6 +60,7 @@ $ drivstaller driver.sys /x
 	* 2: Auto (started automatically by the SCM)
 	* 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)
 	* 4: Disabled
+* /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.
 * /h Print help.
 
 The /i, /u, /o, /x options are exclusive.

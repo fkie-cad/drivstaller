@@ -1,8 +1,7 @@
 @echo off
 
-set prog_name=%~n0
-set uprog_dir="%~dp0"
-set verbose=1
+set my_name=%~n0
+set my_dir="%~dp0"
 
 set /a prog=0
 
@@ -13,7 +12,11 @@ set /a pdb=0
 set /a debug_print=0
 set /a rtl=0
 set platform=x64
-set configuration=Debug
+set /a verbose=0
+
+set pts=v142
+:: set /a pts=v143
+:: set /a pts=WindowsApplicationForDrivers10.0
 
 set prog_proj=drivstaller.vcxproj
 
@@ -22,7 +25,7 @@ set /a EP_FLAG=2
 set /a IP_FLAG=4
 
 
-if [%1]==[] goto help
+if [%1]==[] goto main
 
 GOTO :ParseParams
 
@@ -68,6 +71,16 @@ GOTO :ParseParams
         SET /a rtl=1
         goto reParseParams
     )
+    IF /i "%~1"=="/v" (
+        SET /a verbose=1
+        goto reParseParams
+    )
+
+    IF /i "%~1"=="/pts" (
+        SET pts=%~2
+        SHIFT
+        goto reParseParams
+    )
 
     IF /i "%~1"=="/b" (
         SET /a bitness=%~2
@@ -86,52 +99,53 @@ GOTO :ParseParams
 
 :main
 
-set /a "s=%debug%+%release%"
-if %s% == 0 (
-    set /a debug=0
-    set /a release=1
-)
-
-if %bitness% == 64 (
-    set platform=x64
-)
-if %bitness% == 32 (
-    set platform=x86
-)
-if not %bitness% == 32 (
-    if not %bitness% == 64 (
-        echo ERROR: Bitness /b has to be 32 or 64!
-        EXIT /B 1
+    set /a "s=%debug%+%release%"
+    if %s% == 0 (
+        set /a debug=0
+        set /a release=1
     )
-)
 
-set /a "s=%prog%"
-if %s% == 0 (
-    set /a prog=1
-)
+    if %bitness% == 64 (
+        set platform=x64
+    )
+    if %bitness% == 32 (
+        set platform=x86
+    )
+    if not %bitness% == 32 (
+        if not %bitness% == 64 (
+            echo ERROR: Bitness /b has to be 32 or 64!
+            EXIT /B 1
+        )
+    )
 
-if %verbose% == 1 (
-    echo prog: %prog%
-    echo.
-    echo debug: %debug%
-    echo release: %release%
-    echo bitness: %bitness%
-    echo pdb: %pdb%
-    echo dprint: %debug_print%
-    echo rtl: %rtl%
-)
+    set /a "s=%prog%"
+    if %s% == 0 (
+        set /a prog=1
+    )
 
-if %prog%==1 call :build %prog_proj%
+    if %verbose% == 1 (
+        echo prog: %prog%
+        echo.
+        echo debug: %debug%
+        echo release: %release%
+        echo bitness: %bitness%
+        echo pdb: %pdb%
+        echo dprint: %debug_print%
+        echo rtl: %rtl%
+        echo pts=%pts%
+    )
 
-exit /B 0
+    if %prog%==1 call :build %prog_proj%
+
+    exit /B 0
 
 
 
 :build
     SETLOCAL
         set proj=%~1
-        if %debug%==1 call :buildEx %proj%,%platform%,Debug,%debug_print%,%rtl%,%pdb%
-        if %release%==1 call :buildEx %proj%,%platform%,Release,%debug_print%,%rtl%,%pdb%
+        if %debug%==1 call :buildEx %proj%,%platform%,Debug,%debug_print%,%rtl%,%pdb%,%pts%
+        if %release%==1 call :buildEx %proj%,%platform%,Release,%debug_print%,%rtl%,%pdb%,%pts%
     ENDLOCAL
     
     EXIT /B %ERRORLEVEL%
@@ -144,6 +158,7 @@ exit /B 0
         set /a dpf=%~4
         set rtl=%~5
         set pdb=%~6
+        set pts=%~7
         
         ::set /a "dp=%dpf%&DP_FLAG"
         set /a dp=%dpf%
@@ -171,9 +186,10 @@ exit /B 0
         echo  - DebugPrint=%dp%
         echo  - ErrorPrint=%ep%
         echo  - pdb=%pdb%
+        echo  - pts=%pts%
         echo.
         
-        msbuild %proj% /p:Platform=%platform% /p:Configuration=%conf% /p:DebugPrint=%dp% /p:ErrorPrint=%ep% /p:RuntimeLib=%rtl% /p:PDB=%pdb%
+        msbuild %proj% /p:Platform=%platform% /p:Configuration=%conf% /p:DebugPrint=%dp% /p:ErrorPrint=%ep% /p:RuntimeLib=%rtl% /p:PDB=%pdb% /p:PlatformToolset=%pts%
         echo.
         echo ----------------------------------------------------
         echo.
@@ -184,8 +200,8 @@ exit /B 0
 
 
 :usage
-    echo Usage: %prog_name% [/ds] [/d] [/r] [/dp] [/ep] [/b 32^|64] [/pdb] [/rtl]
-    echo Default: %prog_name% [/ds /r /b 64]
+    echo Usage: %my_name% [/ds] [/d] [/r] [/dp] [/ep] [/b 32^|64] [/pdb] [/rtl] [/pts ^<toolset^>]
+    echo Default: %my_name% [/ds /r /b 64]
     exit /B 0
     
 :help
@@ -202,6 +218,7 @@ exit /B 0
     echo /ep: Error print flag.
     echo /pdb: Compile with pdbs.
     echo /rtl: Compile with RuntimeLibrary.
+    echo /pts Platformtoolset. Defaults to "v142".
     echo.
     echo /h: Print this.
     echo.
