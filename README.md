@@ -6,7 +6,7 @@ Generic standalone tool inspired by Windows Driver examples.
 
 ## Version ##
 1.1.4  
-Last changed: 13.05.2022
+Last changed: 16.05.2022
 
 
 ## REQUIREMENTS ##
@@ -48,10 +48,17 @@ Just stop an already installed driver:
 ```bash
 $ drivstaller driver.sys /x
 ```
+
+Install with dependencies and custom name
+```bash
+$ drivstaller driver.sys /i /n mydriver /d dependecy1 /d dependecy2
+```
+
+
 ### Options ###
 * /n Name of service. If not set, it will be derived of the driver path.
 * /i Install and start the driver.
-* /u Unistall and stop the driver.
+* /u Uninstall and stop the driver.
 * /o Start the driver.
 * /x Stop the driver.
 * /s Service start type. 
@@ -67,8 +74,8 @@ The /i, /u, /o, /x options are exclusive.
 
 
 ### Runtime Errors ###
-If a "VCRUNTIMExxx.dll not found Error" occurs on the target system, statically including LIBCMT.lib is a solution.  
-This is done by using the `/p:RunTimeLib=Debug|Release` flag.
+If a "VCRUNTIMExxx.dll not found Error" occurs on the target system, statically including runtime libraries is a solution.  
+This is done by using the `/rtl` or `/p:RunTimeLib=Debug|Release` flag.
 
 
 ## COPYRIGHT, CREDITS & CONTACT ##

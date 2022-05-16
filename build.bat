@@ -58,10 +58,6 @@ GOTO :ParseParams
         SET /a "debug_print=%debug_print%|EP_FLAG"
         goto reParseParams
     )
-    IF /i "%~1"=="/ip" (
-        SET /a "debug_print=%debug_print%|IP_FLAG"
-        goto reParseParams
-    )
 
     IF /i "%~1"=="/pdb" (
         SET /a pdb=1

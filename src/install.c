@@ -40,7 +40,7 @@ StopDriver(
 
 
 
-BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_ PCHAR Dependencies, _In_ USHORT Mode)
+BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_opt_ PCHAR Dependencies, _In_ USHORT Mode)
 {
     SC_HANDLE   schSCManager;
     BOOL rCode = TRUE;

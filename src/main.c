@@ -18,18 +18,22 @@
 
 #define BINARY_NAME ("drivstaller")
 #define VERSION ("1.1.4")
-#define LAST_CHANGED ("13.05.2022")
+#define LAST_CHANGED ("16.05.2022")
 
 
+
+typedef struct _DEPENDENCIES {
+    PCHAR Buffer;
+    ULONG Size; // buffer size
+    ULONG Count; // string count
+} DEPENDENCIES, *PDEPENDENCIES;
 
 typedef struct _CMD_PARAMS {
     CHAR Path[MAX_PATH];
     SIZE_T PathSize;
     CHAR ServiceName[MAX_PATH];
     SIZE_T ServiceNameSize;
-    PCHAR Dependencies;
-    ULONG DependenciesSize;
-    ULONG NrOfDependencies;
+    DEPENDENCIES Dependencies;
     INT Mode;
     DWORD StartType;
 } CMD_PARAMS, *PCMD_PARAMS;
@@ -52,7 +56,7 @@ INT
 parseDependencies(
     _In_ INT argc, 
     _In_reads_(argc) CHAR** argv, 
-    _Inout_ CMD_PARAMS* params, 
+    _Inout_ PDEPENDENCIES Dependencies, 
     _In_ PINT DependencyIds, 
     _In_ INT DependencyIdsCount
 );
@@ -109,7 +113,7 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     {
         case MODE_INSTALL:
             //printf("Installing %s\n", params.Path);
-            s = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies, MODE_INSTALL);
+            s = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL);
             if ( !s )
             {
                 printf("ERROR: Unable to install driver.\n");
@@ -140,8 +144,8 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     if ( s )
         printf("SUCCESS!\n");
 
-    if ( params.Dependencies )
-        free(params.Dependencies);
+    if ( params.Dependencies.Buffer )
+        free(params.Dependencies.Buffer);
 
     return 0;
 }
@@ -259,7 +263,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
         }
     }
 
-    parseDependencies(argc, argv, params, depIds, depIdsCount);
+    parseDependencies(argc, argv, &params->Dependencies, depIds, depIdsCount);
     
     PCHAR bname = NULL;
     if ( path )
@@ -370,14 +374,14 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
             else printf("start type: %s\n", "UNKNOWN");
         }
 
-        if ( params->NrOfDependencies > 0 )
+        if ( params->Dependencies.Count > 0 )
         {
-            printf("Dependencies (%u):\n", params->NrOfDependencies);
+            printf("Dependencies (%u):\n", params->Dependencies.Count );
             ULONG offset = 0;
-            for ( i = 0; i < (INT)params->NrOfDependencies; i++ )
+            for ( i = 0; i < (INT)params->Dependencies.Count; i++ )
             {
-                printf(" [%u] %s\n", (i+1), &params->Dependencies[offset]);
-                offset += (ULONG)strlen(&params->Dependencies[offset]) + 1;
+                printf(" [%u] %s\n", (i+1), &params->Dependencies.Buffer[offset]);
+                offset += (ULONG)strlen(&params->Dependencies.Buffer[offset]) + 1;
             }
         }
 
@@ -387,7 +391,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
     return TRUE;
 }
 
-INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ CMD_PARAMS* params, _In_ PINT DependencyIds, _In_ INT DependencyIdsCount)
+INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPENDENCIES Dependencies, _In_ PINT DependencyIds, _In_ INT DependencyIdsCount)
 {
     INT i;
     PCHAR arg = NULL;
@@ -425,12 +429,12 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ CMD_P
     if ( reqSize > ULONG_MAX )
         return -1;
 
-    params->Dependencies = (PCHAR)malloc(reqSize);
-    if ( !params->Dependencies )
+    Dependencies->Buffer = (PCHAR)malloc(reqSize);
+    if ( !Dependencies->Buffer )
         return -1;
 
-    params->NrOfDependencies = count;
-    params->DependenciesSize = (ULONG)reqSize;
+    Dependencies->Count = count;
+    Dependencies->Size = (ULONG)reqSize;
 
     offset = 0;
     for ( i = 0; i < DependencyIdsCount; i++ )
@@ -444,14 +448,14 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ CMD_P
 
         reqSize = strlen(arg);
 
-        memcpy(&params->Dependencies[offset], arg, reqSize);
+        memcpy(&Dependencies->Buffer[offset], arg, reqSize);
         offset += reqSize;
-        params->Dependencies[offset] = 0; // terminate string
+        Dependencies->Buffer[offset] = 0; // terminate string
         offset++;
     }
-    params->Dependencies[offset] = 0; // terminate array
+    Dependencies->Buffer[offset] = 0; // terminate array
     offset++;
-    params->Dependencies[offset] = 0; // extra termination
+    Dependencies->Buffer[offset] = 0; // extra termination
 
     return 0;
 }
