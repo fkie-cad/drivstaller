@@ -17,8 +17,8 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.4")
-#define LAST_CHANGED ("16.05.2022")
+#define VERSION ("1.1.5")
+#define LAST_CHANGED ("02.06.2022")
 
 
 
@@ -79,6 +79,9 @@ isAskForHelp(
     _In_reads_(argc) CHAR** argv
 );
 
+BOOL
+IsProcessElevated();
+
 
 
 INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
@@ -108,6 +111,12 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 
     if ( params.Mode == MODE_INSTALL && !FileExists(params.Path) )
         return 1;
+
+    if ( !IsProcessElevated() )
+    {
+        printf("ERROR (0x%x): Not elevated! Please run as Admin.\n", -1);
+        return -1;
+    }
 
     switch ( params.Mode )
     {
@@ -495,4 +504,34 @@ BOOL hasValue(char* type, int i, int end_i)
     }
 
     return TRUE;
+}
+
+BOOL IsProcessElevated()
+{
+	BOOL fIsElevated = FALSE;
+	HANDLE hToken = NULL;
+	TOKEN_ELEVATION elevation;
+	DWORD dwSize;
+
+	if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) )
+	{
+        printf("(0x%x): OpenProcessToken failed\n", GetLastError());
+		goto clean;  // if Failed, we treat as False
+	}
+
+	if ( !GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize) )
+	{	
+        printf("ERROR (0x%x): GetTokenInformation failed\n", GetLastError());
+		goto clean;// if Failed, we treat as False
+	}
+
+	fIsElevated = elevation.TokenIsElevated;
+
+clean:
+	if (hToken)
+	{
+		CloseHandle(hToken);
+		hToken = NULL;
+	}
+	return fIsElevated; 
 }
