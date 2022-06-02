@@ -25,13 +25,12 @@ set /a EP_FLAG=2
 set /a IP_FLAG=4
 
 
-if [%1]==[] goto main
 
 GOTO :ParseParams
 
 :ParseParams
 
-    REM IF "%~1"=="" GOTO Main
+    if [%1]==[] goto main
     if [%1]==[/?] goto help
     if [%1]==[/h] goto help
     if [%1]==[/help] goto help
@@ -59,16 +58,18 @@ GOTO :ParseParams
         goto reParseParams
     )
 
+    IF /i "%~1"=="/b" (
+        SET /a bitness=%~2
+        SHIFT
+        goto reParseParams
+    )
+
     IF /i "%~1"=="/pdb" (
         SET /a pdb=1
         goto reParseParams
     )
     IF /i "%~1"=="/rtl" (
         SET /a rtl=1
-        goto reParseParams
-    )
-    IF /i "%~1"=="/v" (
-        SET /a verbose=1
         goto reParseParams
     )
 
@@ -78,9 +79,8 @@ GOTO :ParseParams
         goto reParseParams
     )
 
-    IF /i "%~1"=="/b" (
-        SET /a bitness=%~2
-        SHIFT
+    IF /i "%~1"=="/v" (
+        SET /a verbose=1
         goto reParseParams
     ) ELSE (
         echo Unknown option : "%~1"
@@ -156,13 +156,9 @@ GOTO :ParseParams
         set pdb=%~6
         set pts=%~7
         
-        ::set /a "dp=%dpf%&DP_FLAG"
-        set /a dp=%dpf%
+        :: print flags
+        set /a "dp=%dpf%&~EP_FLAG"
         set /a "ep=%dpf%&EP_FLAG"
-        
-        if %dp% == 2 (
-            set /a dp=0
-        )
         if not %ep% == 0 (
             set /a ep=1
         )

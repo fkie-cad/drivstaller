@@ -5,8 +5,8 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.4  
-Last changed: 16.05.2022
+1.1.5  
+Last changed: 02.06.2022
 
 
 ## REQUIREMENTS ##
@@ -25,6 +25,30 @@ $devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [/p:Configuration=Deb
 The PlatformToolset defaults to "v142", but may be changed with the `/pts` option.
 "v142" is used for VS 2019 version, "v143" would be used in VS 2022, 
 or you could also use "WindowsApplicationForDrivers10.0" with WDK10 installed.
+
+
+## Usage ##
+
+```bash
+$ drivstaller <path> [options]
+```
+
+### Options ###
+* /n Name of service. If not set, it will be derived of the driver path.
+* /i Install and start the driver.
+* /u Uninstall and stop the driver.
+* /o Start the driver.
+* /x Stop the driver.
+* /s Service start type. 
+	* 0: Boot (started by the system loader) 
+	* 1: System (started by the IoInitSystem)
+	* 2: Auto (started automatically by the SCM)
+	* 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)
+	* 4: Disabled
+* /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.
+* /h Print help.
+
+The /i, /u, /o, /x options are exclusive.
 
 
 ## Run ##
@@ -49,28 +73,10 @@ Just stop an already installed driver:
 $ drivstaller driver.sys /x
 ```
 
-Install with dependencies and custom name
+Install with dependencies and custom service name
 ```bash
-$ drivstaller driver.sys /i /n mydriver /d dependecy1 /d dependecy2
+$ drivstaller driver.sys /i /n mydriver /d dependency1 /d dependency2
 ```
-
-
-### Options ###
-* /n Name of service. If not set, it will be derived of the driver path.
-* /i Install and start the driver.
-* /u Uninstall and stop the driver.
-* /o Start the driver.
-* /x Stop the driver.
-* /s Service start type. 
-	* 0: Boot (started by the system loader) 
-	* 1: System (started by the IoInitSystem)
-	* 2: Auto (started automatically by the SCM)
-	* 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)
-	* 4: Disabled
-* /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.
-* /h Print help.
-
-The /i, /u, /o, /x options are exclusive.
 
 
 ### Runtime Errors ###

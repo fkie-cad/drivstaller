@@ -408,6 +408,9 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
     SIZE_T offset;
     ULONG count = 0;
 
+    //
+    // get required size of flat string array
+
     for ( i = 0; i < DependencyIdsCount; i++ )
     {
         if ( DependencyIds[i] >= argc )
@@ -431,16 +434,24 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
     if ( reqSize == 0 )
         return -1;
     
-    // dependencies array terminating 0
+    // add dependencies array terminating 0
     // + one extra 0 for wrong implementations
     reqSize += 2;
 
     if ( reqSize > ULONG_MAX )
         return -1;
 
+
+    //
+    // alloc buffer
+    
     Dependencies->Buffer = (PCHAR)malloc(reqSize);
     if ( !Dependencies->Buffer )
         return -1;
+
+
+    //
+    // fill array buffer with strings
 
     Dependencies->Count = count;
     Dependencies->Size = (ULONG)reqSize;
@@ -482,17 +493,6 @@ BOOL isArgOfType(_In_ CHAR* arg, _In_ CHAR* type)
     if ( arg == NULL || ( arg[0] != LIN_PARAM_IDENTIFIER && arg[0] != WIN_PARAM_IDENTIFIER ) || arg[1] == 0 )
         return FALSE;
     return strcmp(&arg[1], type)==0;
-    //INT i;
-    //if ( arg == NULL || arg[0] == 0 || arg[1] == 0 )
-    //	return FALSE;
-    //for ( i = 0; i < n ; i++ )
-    //{
-    //	printf("%02x\n", arg[i+1]);
-    //	if ( arg[i+1] != type[i] )
-    //		return FALSE;
-    //}
-
-    //return TRUE;
 }
 
 BOOL hasValue(char* type, int i, int end_i)
