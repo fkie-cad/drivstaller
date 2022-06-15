@@ -16,7 +16,7 @@ InstallDriver(
     _In_ LPCTSTR Name,
     _In_ LPCTSTR ServiceExe,
     _In_ DWORD StartType,
-    _In_ PCHAR Dependencies
+    _In_opt_ PCHAR Dependencies
 );
 
 
@@ -115,7 +115,7 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
 /**
  * Install the driver
  */
-BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_ PCHAR Dependencies)
+BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_opt_ PCHAR Dependencies)
 {
     SC_HANDLE schService;
     DWORD err;

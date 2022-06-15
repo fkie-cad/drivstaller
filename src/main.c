@@ -389,7 +389,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
             ULONG offset = 0;
             for ( i = 0; i < (INT)params->Dependencies.Count; i++ )
             {
-                printf(" [%u] %s\n", (i+1), &params->Dependencies.Buffer[offset]);
+                printf(" [%d] %s\n", (i+1), &params->Dependencies.Buffer[offset]);
                 offset += (ULONG)strlen(&params->Dependencies.Buffer[offset]) + 1;
             }
         }
