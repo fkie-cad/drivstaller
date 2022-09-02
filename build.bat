@@ -5,11 +5,14 @@ set my_dir="%~dp0"
 
 set /a prog=0
 
+set /a DP_FLAG=1
+set /a EP_FLAG=2
+
 set /a debug=0
 set /a release=0
 set /a bitness=64
 set /a pdb=0
-set /a debug_print=0
+set /a debug_print=%EP_FLAG%
 set /a rtl=0
 set platform=x64
 set /a verbose=0
@@ -19,10 +22,6 @@ set pts=v142
 :: set /a pts=WindowsApplicationForDrivers10.0
 
 set prog_proj=drivstaller.vcxproj
-
-set /a DP_FLAG=1
-set /a EP_FLAG=2
-set /a IP_FLAG=4
 
 
 
@@ -50,10 +49,15 @@ GOTO :ParseParams
     )
 
     IF /i "%~1"=="/dp" (
+        SET /a "debug_print=%~2"
+        SHIFT
+        goto reParseParams
+    )
+    IF /i "%~1"=="/dpf (
         SET /a "debug_print=%debug_print%|DP_FLAG"
         goto reParseParams
     )
-    IF /i "%~1"=="/ep" (
+    IF /i "%~1"=="/epf" (
         SET /a "debug_print=%debug_print%|EP_FLAG"
         goto reParseParams
     )
@@ -162,25 +166,33 @@ GOTO :ParseParams
         if not %ep% == 0 (
             set /a ep=1
         )
-
+        
+        :: run time libs
         if %rtl% == 1 (
             set rtl=%conf%
         ) else (
             set rtl=None
         )
 
-        echo build
-        echo  - Project=%proj%
-        echo  - Platform=%platform%
-        echo  - Configuration=%conf%
-        echo  - DebugPrint=%dp%
-        echo  - RuntimeLib=%rtl%
-        echo  - DebugPrint=%dp%
-        echo  - ErrorPrint=%ep%
-        echo  - pdb=%pdb%
-        echo  - pts=%pts%
-        echo.
+        :: pdbs
+        if [%conf%] EQU [Debug] (
+            set /a pdb=1
+        )
         
+        if %verbose% EQU 1 (
+            echo build
+            echo  - Project=%proj%
+            echo  - Platform=%platform%
+            echo  - Configuration=%conf%
+            echo  - DebugPrint=%dp%
+            echo  - RuntimeLib=%rtl%
+            echo  - DebugPrint=%dp%
+            echo  - ErrorPrint=%ep%
+            echo  - pdb=%pdb%
+            echo  - pts=%pts%
+            echo.
+        )
+
         msbuild %proj% /p:Platform=%platform% /p:Configuration=%conf% /p:DebugPrint=%dp% /p:ErrorPrint=%ep% /p:RuntimeLib=%rtl% /p:PDB=%pdb% /p:PlatformToolset=%pts%
         echo.
         echo ----------------------------------------------------

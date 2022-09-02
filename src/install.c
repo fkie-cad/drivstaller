@@ -5,8 +5,19 @@
 #include <strsafe.h>
 
 #include "install.h"
+#include "errors.h"
 
 #pragma warning( disable : 4995 )
+
+
+
+
+
+BOOL
+CheckDriver(
+    _In_ SC_HANDLE SchSCManager,
+    _In_ LPCTSTR Name
+);
 
 
 
@@ -67,6 +78,11 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
 
     switch ( Mode )
     {
+        case MODE_CHECK:
+            rCode = CheckDriver(schSCManager, Name);
+
+            break;
+
         case MODE_INSTALL:
             if ( InstallDriver(schSCManager, Name, ServiceExe, StartType, Dependencies) )
             {
@@ -100,7 +116,7 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
             break;
 
         default:
-            printf("ERROR: Unknown ManageDriver() function. \n");
+            printf("ERROR: Unknown ManageDriver() function.\n");
 
             rCode = FALSE;
             break;
@@ -113,11 +129,47 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
 }
 
 /**
+ * Check if driver/service exists
+ */
+BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
+{
+    SC_HANDLE schService = NULL;
+    
+    printf("Checking driver service %s\n", Name);
+
+    schService = OpenService(SchSCManager, Name, SERVICE_ALL_ACCESS);
+
+    if ( schService == NULL )
+    {
+        ULONG le = GetLastError();
+        if ( le == ERROR_SERVICE_DOES_NOT_EXIST )
+        {
+            printf("=> The service does not exist.\n");
+            return TRUE;
+        }
+        else
+        {
+            printf("ERROR (0x%x): OpenService failed! \n", GetLastError());
+            return FALSE;
+        }
+    }
+    else
+    {
+        printf("=> The service exists.\n");
+    }
+
+    if ( schService )
+        CloseServiceHandle(schService);
+
+    return TRUE;
+}
+
+/**
  * Install the driver
  */
 BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_opt_ PCHAR Dependencies)
 {
-    SC_HANDLE schService;
+    SC_HANDLE schService = NULL;
     DWORD err;
 
     printf("Creating driver service %s\n", Name);
@@ -165,7 +217,7 @@ BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR 
 
 BOOL RemoveDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 {
-    SC_HANDLE schService;
+    SC_HANDLE schService = NULL;
     BOOL rCode;
     
     printf("Removing driver service %s\n", Name);
@@ -196,7 +248,7 @@ BOOL RemoveDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 
 BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 {
-    SC_HANDLE schService;
+    SC_HANDLE schService = NULL;
     DWORD err;
     
     printf("Starting driver %s\n", Name);
@@ -220,7 +272,7 @@ BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         }
         else
         {
-            printf("ERROR (0x%x): StartService failure!\n", err);
+            printf("ERROR (0x%x): StartService failure! (%s)\n", err, getErrorString(err));
             return FALSE;
         }
     }
@@ -235,7 +287,7 @@ BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 {
     BOOL rCode = TRUE;
-    SC_HANDLE schService;
+    SC_HANDLE schService = NULL;
     SERVICE_STATUS serviceStatus;
     ULONG le;
     

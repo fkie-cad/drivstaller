@@ -5,8 +5,8 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.5  
-Last changed: 02.06.2022
+1.1.6  
+Last changed: 02.09.2022
 
 
 ## REQUIREMENTS ##
@@ -39,6 +39,7 @@ $ drivstaller <path> [options]
 * /u Uninstall and stop the driver.
 * /o Start the driver.
 * /x Stop the driver.
+* /c Check, if the service already exists.
 * /s Service start type. 
 	* 0: Boot (started by the system loader) 
 	* 1: System (started by the IoInitSystem)
@@ -48,7 +49,7 @@ $ drivstaller <path> [options]
 * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.
 * /h Print help.
 
-The /i, /u, /o, /x options are exclusive.
+The /i, /u, /o, /x, /c options are exclusive.
 
 
 ## Run ##
@@ -76,6 +77,11 @@ $ drivstaller driver.sys /x
 Install with dependencies and custom service name
 ```bash
 $ drivstaller driver.sys /i /n mydriver /d dependency1 /d dependency2
+```
+
+Check, if a driver service already exists
+```bash
+$ drivstaller /c mydriver
 ```
 
 

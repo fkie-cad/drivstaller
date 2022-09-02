@@ -7,6 +7,7 @@
 #define MODE_REMOVE  (0x02)
 #define MODE_START   (0x03)
 #define MODE_STOP    (0x04)
+#define MODE_CHECK   (0x08)
 
 BOOL
 ManageDriver(

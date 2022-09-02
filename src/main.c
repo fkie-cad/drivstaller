@@ -17,8 +17,8 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.5")
-#define LAST_CHANGED ("02.06.2022")
+#define VERSION ("1.1.6")
+#define LAST_CHANGED ("02.09.2022")
 
 
 
@@ -120,6 +120,11 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 
     switch ( params.Mode )
     {
+        case MODE_CHECK:
+            //printf("Stopping %s\n", params.Path);
+            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK);
+            break;
+
         case MODE_INSTALL:
             //printf("Installing %s\n", params.Path);
             s = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL);
@@ -178,7 +183,12 @@ VOID printHelp()
         " * /u Unistall and stop the driver.\n"
         " * /o Start the driver.\n"
         " * /x Stop the driver.\n"
-        " * /s Service start type:\n\t0: Boot (started by the system loader)\n\t1: System (started by the IoInitSystem)\n\t2: Auto (started automatically by the SCM)\n\t3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n\t4: Disabled.\n"
+        " * /c Check, if the service already exists.\n"
+        " * /s Service start type:\n\t0: Boot (started by the system loader)\n"
+        "      1: System (started by the IoInitSystem)\n"
+        "      2: Auto (started automatically by the SCM)\n"
+        "      3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n"
+        "      4: Disabled.\n"
         " * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.\n"
         " * /v Verbose output.\n"
         " * /h Print this.\n"
@@ -209,42 +219,11 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
     {
         //if ( argv[i][0] != PARAM_IDENTIFIER )
         //    continue;
-
-        if ( isArgOfType(argv[i], "i") )
+        
+        if ( isArgOfType(argv[i], "c") )
         {
-            params->Mode = MODE_INSTALL;
+            params->Mode = MODE_CHECK;
             mode_count++;
-        }
-        else if ( isArgOfType(argv[i], "n") )
-        {
-            if ( hasValue("n", i, argc) )
-            {
-                strcpy(params->ServiceName, argv[i+1]);
-                i++;
-            }
-        }
-        else if ( isArgOfType(argv[i], "u") )
-        {
-            params->Mode = MODE_REMOVE;
-            mode_count++;
-        }
-        else if ( isArgOfType(argv[i], "o") )
-        {
-            params->Mode = MODE_START;
-            mode_count++;
-        }
-        else if ( isArgOfType(argv[i], "x") )
-        {
-            params->Mode = MODE_STOP;
-            mode_count++;
-        }
-        else if ( isArgOfType(argv[i], "s") )
-        {
-            if (hasValue("s", i, argc))
-            {
-                params->StartType = (DWORD)strtoul(argv[i+1], NULL, 0);
-                i++;
-            }
         }
         else if ( isArgOfType(argv[i], "d") )
         {
@@ -262,9 +241,45 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
                 i++;
             }
         }
+        else if ( isArgOfType(argv[i], "i") )
+        {
+            params->Mode = MODE_INSTALL;
+            mode_count++;
+        }
+        else if ( isArgOfType(argv[i], "n") )
+        {
+            if ( hasValue("n", i, argc) )
+            {
+                strcpy(params->ServiceName, argv[i+1]);
+                i++;
+            }
+        }
+        else if ( isArgOfType(argv[i], "o") )
+        {
+            params->Mode = MODE_START;
+            mode_count++;
+        }
+        else if ( isArgOfType(argv[i], "s") )
+        {
+            if (hasValue("s", i, argc))
+            {
+                params->StartType = (DWORD)strtoul(argv[i+1], NULL, 0);
+                i++;
+            }
+        }
+        else if ( isArgOfType(argv[i], "u") )
+        {
+            params->Mode = MODE_REMOVE;
+            mode_count++;
+        }
         else if ( isArgOfType(argv[i], "v") )
         {
             verbose = TRUE;
+        }
+        else if ( isArgOfType(argv[i], "x") )
+        {
+            params->Mode = MODE_STOP;
+            mode_count++;
         }
         else
         {
@@ -327,11 +342,13 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
         }
     }
 
+    //if ( (params->Mode & (params->Mode-1)) != 0 )
     if ( mode_count > 1 )
     {
         printf("ERROR: Selected more than 1 mode!\n");
         error = TRUE;
     }
+    //if ( params->Mode == 0 )
     if ( mode_count == 0 )
     {
         printf("ERROR: No mode selected!\n");
