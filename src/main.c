@@ -21,6 +21,9 @@
 #define LAST_CHANGED ("02.09.2022")
 
 
+#define MAX_DEPENDENCIES (0x10)
+
+
 
 typedef struct _DEPENDENCIES {
     PCHAR Buffer;
@@ -189,13 +192,15 @@ VOID printHelp()
         "      2: Auto (started automatically by the SCM)\n"
         "      3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n"
         "      4: Disabled.\n"
-        " * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.\n"
+        " * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x%x) in the required order.\n"
         " * /v Verbose output.\n"
         " * /h Print this.\n"
         "\n"
         "The /i, /u, /o, /x options are exclusive.\n"
         "\n"
-        "Example: %s path\\to\\drv.sys /i /s 3\n", BINARY_NAME
+        "Example: %s path\\to\\drv.sys /i /s 3\n", 
+        BINARY_NAME,
+        MAX_DEPENDENCIES
     );
 }
 
@@ -209,7 +214,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
     BOOL error = FALSE;
     BOOL verbose = FALSE;
     PCHAR path = NULL;
-    INT depIds[0x10] = {0};
+    INT depIds[MAX_DEPENDENCIES] = {0};
     INT depIdsCount = 0;
 
     // defaults
@@ -227,9 +232,9 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* pa
         }
         else if ( isArgOfType(argv[i], "d") )
         {
-            if (hasValue("d", i, argc))
+            if ( hasValue("d", i, argc) )
             {
-                if ( depIdsCount < 0x10 )
+                if ( depIdsCount < MAX_DEPENDENCIES )
                 {
                     depIds[depIdsCount] = i+1;
                     depIdsCount++;
@@ -444,7 +449,7 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
             continue;
         }
 
-        reqSize += strlen(arg) + 1; // string terminating 0
+        reqSize += strlen(arg) + 1; // string + terminating 0
         count++;
     }
 
