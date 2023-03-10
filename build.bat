@@ -25,6 +25,7 @@ set prog_proj=drivstaller.vcxproj
 
 
 
+
 GOTO :ParseParams
 
 :ParseParams
@@ -53,14 +54,6 @@ GOTO :ParseParams
         SHIFT
         goto reParseParams
     )
-    IF /i "%~1"=="/dpf (
-        SET /a "debug_print=%debug_print%|DP_FLAG"
-        goto reParseParams
-    )
-    IF /i "%~1"=="/epf" (
-        SET /a "debug_print=%debug_print%|EP_FLAG"
-        goto reParseParams
-    )
 
     IF /i "%~1"=="/b" (
         SET /a bitness=%~2
@@ -82,7 +75,7 @@ GOTO :ParseParams
         SHIFT
         goto reParseParams
     )
-
+    
     IF /i "%~1"=="/v" (
         SET /a verbose=1
         goto reParseParams
@@ -137,7 +130,7 @@ GOTO :ParseParams
 
     if %prog%==1 call :build %prog_proj%
 
-    exit /B 0
+    exit /B %errorlevel%
 
 
 
