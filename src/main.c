@@ -17,8 +17,8 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.6")
-#define LAST_CHANGED ("02.09.2022")
+#define VERSION ("1.1.7")
+#define LAST_CHANGED ("20.04.2023")
 
 
 #define MAX_DEPENDENCIES (0x10)
@@ -113,7 +113,10 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     }
 
     if ( params.Mode == MODE_INSTALL && !FileExists(params.Path) )
+    {
+        printf("ERROR (0x%x): Driver file not found!\n", ERROR_PATH_NOT_FOUND);
         return 1;
+    }
 
     if ( !IsProcessElevated() )
     {
@@ -231,8 +234,8 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
         arg = argv[i];
         val0 = ( i < argc - 1 ) ? argv[i+1] : NULL;
 
-        if ( !arg )
-            break;
+        //if ( !arg )
+            //break;
         
         if ( IS_1C_ARG(arg, 'c') )
         {
@@ -402,7 +405,10 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
     }
 
     if (error)
+    {
+        printf("\n");
         return FALSE;
+    }
 
     if (verbose)
     {
@@ -550,30 +556,30 @@ BOOL hasValue(char* type, int i, int end_i)
 
 BOOL IsProcessElevated()
 {
-	BOOL fIsElevated = FALSE;
-	HANDLE hToken = NULL;
-	TOKEN_ELEVATION elevation;
-	DWORD dwSize;
+    BOOL fIsElevated = FALSE;
+    HANDLE hToken = NULL;
+    TOKEN_ELEVATION elevation;
+    DWORD dwSize;
 
-	if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) )
-	{
+    if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) )
+    {
         printf("(0x%x): OpenProcessToken failed\n", GetLastError());
-		goto clean;  // if Failed, we treat as False
-	}
+        goto clean;  // if Failed, we treat as False
+    }
 
-	if ( !GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize) )
-	{	
+    if ( !GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize) )
+    {	
         printf("ERROR (0x%x): GetTokenInformation failed\n", GetLastError());
-		goto clean;// if Failed, we treat as False
-	}
+        goto clean;// if Failed, we treat as False
+    }
 
-	fIsElevated = elevation.TokenIsElevated;
+    fIsElevated = elevation.TokenIsElevated;
 
 clean:
-	if (hToken)
-	{
-		CloseHandle(hToken);
-		hToken = NULL;
-	}
-	return fIsElevated; 
+    if (hToken)
+    {
+        CloseHandle(hToken);
+        hToken = NULL;
+    }
+    return fIsElevated; 
 }

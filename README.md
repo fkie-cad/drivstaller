@@ -5,8 +5,8 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.6  
-Last changed: 02.09.2022
+1.1.7  
+Last changed: 20.04.2023
 
 
 ## REQUIREMENTS ##
@@ -41,11 +41,11 @@ $ drivstaller <path> [options]
 * /x Stop the driver.
 * /c Check, if the service already exists.
 * /s Service start type. 
-	* 0: Boot (started by the system loader) 
-	* 1: System (started by the IoInitSystem)
-	* 2: Auto (started automatically by the SCM)
-	* 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)
-	* 4: Disabled
+    * 0: Boot (started by the system loader) 
+    * 1: System (started by the IoInitSystem)
+    * 2: Auto (started automatically by the SCM)
+    * 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)
+    * 4: Disabled
 * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.
 * /h Print help.
 
