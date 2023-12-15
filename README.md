@@ -94,4 +94,4 @@ This is done by using the `/rtl` or `/p:RunTimeLib=Debug|Release` flag.
 Published under [GNU GENERAL PUBLIC LICENSE](LICENSE).   
 
 #### Author ####
-- Henning Braun ([henning.braun@fkie.fraunhofer.de](henning.braun@fkie.fraunhofer.de)) 
+- Henning Braun ([henning.braun@fkie.fraunhofer.de](mailto:henning.braun@fkie.fraunhofer.de)) 

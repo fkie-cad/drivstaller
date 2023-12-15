@@ -7,7 +7,7 @@
 #include "install.h"
 #include "errors.h"
 
-#pragma warning( disable : 4995 )
+//#pragma warning( disable : 4995 )
 
 
 
@@ -144,7 +144,7 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         ULONG le = GetLastError();
         if ( le == ERROR_SERVICE_DOES_NOT_EXIST )
         {
-            printf("=> The service does not exist.\n");
+            printf("  The service does not exist.\n");
             return TRUE;
         }
         else
@@ -199,7 +199,7 @@ BOOL InstallDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name, _In_ LPCTSTR 
 
         if ( err == ERROR_SERVICE_EXISTS )
         {
-            printf("INFO: Service already exists!\n");
+            printf("  Service already exists!\n");
             return TRUE;
         }
         else
@@ -267,7 +267,7 @@ BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
 
         if ( err == ERROR_SERVICE_ALREADY_RUNNING )
         {
-            printf("INFO: Service already running!\n");
+            printf("  Service already running!\n");
             return TRUE;
         }
         else
@@ -300,7 +300,7 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         le = GetLastError();
         if ( le == ERROR_SERVICE_DOES_NOT_EXIST )
         {
-            printf("Service does not exist.\n");
+            printf("  Service does not exist.\n");
             return TRUE;
         }
         else
@@ -319,7 +319,7 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         le = GetLastError();
         if ( le == ERROR_SERVICE_NOT_ACTIVE )
         {
-            printf("Service not active.\n");
+            printf("  Service not active.\n");
             rCode = TRUE;
         }
         else
