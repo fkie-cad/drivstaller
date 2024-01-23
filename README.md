@@ -30,16 +30,17 @@ or you could also use "WindowsApplicationForDrivers10.0" with WDK10 installed.
 ## Usage ##
 
 ```bash
-$ drivstaller <path> [options]
+$ drivstaller [options] <driver>|<service> [options]
 ```
 
 ### Options ###
-* /n Name of service. If not set, it will be derived of the driver path.
-* /i Install and start the driver.
-* /u Uninstall and stop the driver.
-* /o Start the driver.
-* /x Stop the driver.
-* /c Check, if the service already exists.
+* /n Name of service for the /i option. 
+     If not set, it will be derived of the driver path.
+* /i Install and start the driver defined by \<driver\> path.
+* /u Uninstall and stop the driver defined by \<service\> name.
+* /o Start the driver defined by \<service\> name.
+* /x Stop the driver defined by \<service\> name.
+* /c Check, if the \<service\> name already exists.
 * /s Service start type. 
     * 0: Boot (started by the system loader) 
     * 1: System (started by the IoInitSystem)

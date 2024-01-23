@@ -172,7 +172,7 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 
 VOID printUsage()
 {
-    printf("Usage: %s [options] path\\to\\driver.sys [options]\n\n", BINARY_NAME);
+    printf("Usage: %s [options] <driver>|<service> [options]\n\n", BINARY_NAME);
     printf("Version: %s\n", VERSION);
     printf("Last changed: %s\n", LAST_CHANGED);
     printf("Compiled: %s - %s\n", __DATE__, __TIME__);
@@ -184,12 +184,12 @@ VOID printHelp()
     printf(
         "\n"
         "Options:\n"
-        " * /n Name of service. If not set, it will be derived of the driver path.\n"
-        " * /i Install and start the driver.\n"
-        " * /u Unistall and stop the driver.\n"
-        " * /o Start the driver.\n"
-        " * /x Stop the driver.\n"
-        " * /c Check, if the service already exists.\n"
+        " * /n Name of service for the /i option. If not set, it will be derived of the driver path.\n"
+        " * /i Install and start the driver defined by <driver> path.\n"
+        " * /u Unistall and stop the driver defined by <service> name.\n"
+        " * /o Start the driver defined by <service> name.\n"
+        " * /x Stop the driver defined by <service> name.\n"
+        " * /c Check, if the <service> name already exists.\n"
         " * /s Service start type:\n"
         "      0: Boot (started by the system loader)\n"
         "      1: System (started by the IoInitSystem)\n"
@@ -235,9 +235,6 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
         arg = argv[i];
         val0 = ( i < argc - 1 ) ? argv[i+1] : NULL;
 
-        //if ( !arg )
-            //break;
-        
         if ( IS_1C_ARG(arg, 'c') )
         {
             Params->Mode = MODE_CHECK;
