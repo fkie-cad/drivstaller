@@ -17,8 +17,8 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.7")
-#define LAST_CHANGED ("20.04.2023")
+#define VERSION ("1.1.8")
+#define LAST_CHANGED ("25.01.2024")
 
 
 #define MAX_DEPENDENCIES (0x10)
@@ -127,7 +127,6 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     switch ( params.Mode )
     {
         case MODE_CHECK:
-            //printf("Stopping %s\n", params.Path);
             s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK);
             break;
 
@@ -410,13 +409,14 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
 
     if (verbose)
     {
-        printf("path: %s (%zu)\n", Params->Path, Params->PathSize);
-        printf("name: %s (%zu)\n", Params->ServiceName, Params->ServiceNameSize);
+        printf("driver path: %s (%zu)\n", Params->Path, Params->PathSize);
+        printf("service name: %s (%zu)\n", Params->ServiceName, Params->ServiceNameSize);
 
         if (Params->Mode == MODE_INSTALL) printf("mode: %s\n", "MODE_INSTALL");
         else if (Params->Mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
         else if (Params->Mode == MODE_START) printf("mode: %s\n", "MODE_START");
         else if (Params->Mode == MODE_STOP) printf("mode: %s\n", "MODE_STOP");
+        else if (Params->Mode == MODE_CHECK) printf("mode: %s\n", "MODE_CHECK");
         else printf("mode: %s\n", "UNKNOWN");
         
         if ( Params->Mode == MODE_INSTALL )

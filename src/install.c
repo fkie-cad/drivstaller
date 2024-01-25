@@ -155,7 +155,7 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     }
     else
     {
-        printf("=> The service exists.\n");
+        printf("=> The service \"%s\" exists.\n", Name);
     }
 
     if ( schService )

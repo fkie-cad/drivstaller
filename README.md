@@ -5,8 +5,8 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.7  
-Last changed: 20.04.2023
+1.1.8  
+Last changed: 25.01.2024
 
 
 ## REQUIREMENTS ##
@@ -62,7 +62,7 @@ $ drivstaller driver.sys /i /s 3
 
 Remove and stop a driver:
 ```bash
-$ drivstaller driver.sys /u
+$ drivstaller driver /u
 ```
 
 Just start an already installed driver:
@@ -72,7 +72,7 @@ $ drivstaller driver.sys /o
 
 Just stop an already installed driver:
 ```bash
-$ drivstaller driver.sys /x
+$ drivstaller driver /x
 ```
 
 Install with dependencies and custom service name
