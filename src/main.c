@@ -7,6 +7,7 @@
 
 #pragma warning ( disable : 4996 )
 
+#include "args.h"
 #include "install.h"
 #include "Files.h"
 
@@ -17,8 +18,8 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.8")
-#define LAST_CHANGED ("25.01.2024")
+#define VERSION ("1.1.9")
+#define LAST_CHANGED ("26.04.2024")
 
 
 #define MAX_DEPENDENCIES (0x10)
@@ -31,6 +32,12 @@ typedef struct _DEPENDENCIES {
     ULONG Count; // string count
 } DEPENDENCIES, *PDEPENDENCIES;
 
+typedef struct _FLAGS {
+    ULONG Verbose:1;
+    ULONG ServiceNameSet:1;
+    ULONG Reserved:30;
+} FLAGS, *PFLAGS;
+
 typedef struct _CMD_PARAMS {
     CHAR Path[MAX_PATH];
     SIZE_T PathSize;
@@ -38,7 +45,8 @@ typedef struct _CMD_PARAMS {
     SIZE_T ServiceNameSize;
     DEPENDENCIES Dependencies;
     INT Mode;
-    DWORD StartType;
+    ULONG StartType;
+    FLAGS Flags;
 } CMD_PARAMS, *PCMD_PARAMS;
 
 
@@ -89,51 +97,52 @@ IsProcessElevated();
 
 INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 {
+    INT s = 0;
     CMD_PARAMS params = { 0 };
-    BOOL s = TRUE;
+    BOOL success = TRUE;
 
     printf("%s - %s\n\n", BINARY_NAME, VERSION);
 
     if ( argc < 2 )
     {
         printUsage();
-        return 0;
+        return ERROR_INVALID_PARAMETER;
     }
 
     if ( isAskForHelp(argc, argv) )
     {
         printHelp();
-        return TRUE;
+        return 0;
     }
 
     if ( !parseArgs(argc, argv, &params) )
     {
         printUsage();
-        return 0;
+        return ERROR_INVALID_PARAMETER;
     }
 
     if ( params.Mode == MODE_INSTALL && !FileExists(params.Path) )
     {
-        printf("ERROR (0x%x): Driver file not found!\n", ERROR_PATH_NOT_FOUND);
-        return 1;
+        printf("ERROR (0x%x): Driver file \"%s\" not found!\n", ERROR_PATH_NOT_FOUND, params.Path);
+        return ERROR_PATH_NOT_FOUND;
     }
 
-    if ( !IsProcessElevated() )
-    {
-        printf("ERROR (0x%x): Not elevated! Please run as Admin.\n", -1);
-        return -1;
-    }
+    //if ( !IsProcessElevated() )
+    //{
+    //    printf("ERROR (0x%x): Not elevated! Please run as Admin.\n", -1);
+    //    return ERROR_PRIVILEGE_NOT_HELD;
+    //}
 
     switch ( params.Mode )
     {
         case MODE_CHECK:
-            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK);
             break;
 
         case MODE_INSTALL:
             //printf("Installing %s\n", params.Path);
-            s = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL);
-            if ( !s )
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL);
+            if ( !success )
             {
                 printf("ERROR: Unable to install driver.\n");
 
@@ -143,30 +152,32 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
 
         case MODE_REMOVE:
             //printf("Removing %s\n", params.Path);
-            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE);
             break;
 
         case MODE_START:
             //printf("Starting %s\n", params.Path);
-            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_START);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_START);
             break;
 
         case MODE_STOP:
             //printf("Stopping %s\n", params.Path);
-            s = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP);
             break;
 
         default:
             break;
     }
 
-    if ( s )
+    s = GetLastError();
+
+    if ( success )
         printf("SUCCESS!\n");
 
     if ( params.Dependencies.Buffer )
         free(params.Dependencies.Buffer);
 
-    return 0;
+    return s;
 }
 
 VOID printUsage()
@@ -183,7 +194,9 @@ VOID printHelp()
     printf(
         "\n"
         "Options:\n"
-        " * /n Name of service for the /i option. If not set, it will be derived of the driver path.\n"
+        " * /n Name of service for the /i or /c option. "
+           "If not set, the name will be derived of the driver path. "
+           "I.e. the driver base name without the .sys suffix.\n"
         " * /i Install and start the driver defined by <driver> path.\n"
         " * /u Unistall and stop the driver defined by <service> name.\n"
         " * /o Start the driver defined by <service> name.\n"
@@ -207,18 +220,14 @@ VOID printHelp()
     );
 }
 
-#define NOT_A_VALUE(__val__) (__val__ == NULL || __val__[0] == LIN_PARAM_IDENTIFIER || __val__[0] == WIN_PARAM_IDENTIFIER)
-//#define IS_VALUE(__val__) (__val__ != NULL || __val__[0] != LIN_PARAM_IDENTIFIER || __val__[0] != WIN_PARAM_IDENTIFIER)
-#define IS_1C_ARG(_a_, _v_) ( ( _a_[0] == LIN_PARAM_IDENTIFIER || _a_[0] == WIN_PARAM_IDENTIFIER ) && _a_[1] == _v_ && _a_[2] == 0 )
 BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Params)
 {
     INT start_i = 1;
     INT i;
     INT mode_count = 0;
-    DWORD fpl = 0;
-    DWORD le = 0;
+    ULONG fpl = 0;
+    ULONG le = 0;
     BOOL error = FALSE;
-    BOOL verbose = FALSE;
     PCHAR path = NULL;
     INT depIds[MAX_DEPENDENCIES] = {0};
     INT depIdsCount = 0;
@@ -270,6 +279,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
                 continue;
             }
             strcpy(Params->ServiceName, argv[i+1]);
+            Params->Flags.ServiceNameSet = 1;
             i++;
         }
         else if ( IS_1C_ARG(arg, 'o') )
@@ -284,7 +294,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
                 printf("No start type value!\n");
                 continue;
             }
-            Params->StartType = (DWORD)strtoul(argv[i+1], NULL, 0);
+            Params->StartType = (ULONG)strtoul(argv[i+1], NULL, 0);
             i++;
         }
         else if ( IS_1C_ARG(arg, 'u') )
@@ -294,7 +304,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
         }
         else if ( IS_1C_ARG(arg, 'v') )
         {
-            verbose = TRUE;
+            Params->Flags.Verbose = 1;
         }
         else if ( IS_1C_ARG(arg, 'x') )
         {
@@ -352,28 +362,30 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
             strcpy(Params->ServiceName, ++stream);
             Params->ServiceNameSize = strlen(Params->ServiceName);
         }
-        else
+        else 
         {
             Params->ServiceNameSize = strlen(Params->ServiceName);
-            // remove ".sys"
-            if ( Params->ServiceNameSize > 4 )
+            
+            // remove ".sys" if derived base name is used as the service name
+            if ( !Params->Flags.ServiceNameSet )
             {
-                if ( *(ULONG*)&Params->ServiceName[Params->ServiceNameSize-4] == 0x7379732e )
+                if ( Params->ServiceNameSize > 4 )
                 {
-                    Params->ServiceNameSize -= 4;
-                    Params->ServiceName[Params->ServiceNameSize] = 0;
+                    if ( *(ULONG*)&Params->ServiceName[Params->ServiceNameSize-4] == 0x7379732e )
+                    {
+                        Params->ServiceNameSize -= 4;
+                        Params->ServiceName[Params->ServiceNameSize] = 0;
+                    }
                 }
             }
         }
     }
 
-    //if ( (Params->Mode & (Params->Mode-1)) != 0 )
     if ( mode_count > 1 )
     {
         printf("ERROR: Selected more than 1 mode!\n");
         error = TRUE;
     }
-    //if ( Params->Mode == 0 )
     if ( mode_count == 0 )
     {
         printf("ERROR: No mode selected!\n");
@@ -407,7 +419,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
         return FALSE;
     }
 
-    if (verbose)
+    if ( Params->Flags.Verbose )
     {
         printf("driver path: %s (%zu)\n", Params->Path, Params->PathSize);
         printf("service name: %s (%zu)\n", Params->ServiceName, Params->ServiceNameSize);
@@ -557,7 +569,7 @@ BOOL IsProcessElevated()
     BOOL fIsElevated = FALSE;
     HANDLE hToken = NULL;
     TOKEN_ELEVATION elevation;
-    DWORD dwSize;
+    ULONG dwSize;
 
     if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) )
     {

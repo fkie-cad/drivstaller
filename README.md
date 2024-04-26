@@ -5,8 +5,8 @@ Generic standalone tool inspired by Windows Driver examples.
 
 
 ## Version ##
-1.1.8  
-Last changed: 25.01.2024
+1.1.9  
+Last changed: 26.04.2024
 
 
 ## REQUIREMENTS ##
@@ -35,7 +35,8 @@ $ drivstaller [options] <driver>|<service> [options]
 
 ### Options ###
 * /n Name of service for the /i option. 
-     If not set, it will be derived of the driver path.
+     If not set, the name will be derived of the driver path.
+     I.e. the driver base name without the .sys suffix.
 * /i Install and start the driver defined by \<driver\> path.
 * /u Uninstall and stop the driver defined by \<service\> name.
 * /o Start the driver defined by \<service\> name.
@@ -59,6 +60,10 @@ Install and start a driver:
 ```bash
 $ drivstaller driver.sys /i /s 3
 ```
+Install and start a driver with a custom service name:
+```bash
+$ drivstaller driver.sys /i /s 3 /n driverSvc
+```
 
 Remove and stop a driver:
 ```bash
@@ -80,9 +85,16 @@ Install with dependencies and custom service name
 $ drivstaller driver.sys /i /n mydriver /d dependency1 /d dependency2
 ```
 
-Check, if a driver service already exists
+Check, if a driver service "driverSvc" for the "driver.sys" already exists
 ```bash
-$ drivstaller /c mydriver
+$ drivstaller /c /n driverSvc
+```
+
+Check, if a driver service "driver" for the "driver.sys" already exists
+```bash
+$ drivstaller /c driver.sys
+$ drivstaller /c driver
+$ drivstaller /c /n driver
 ```
 
 
