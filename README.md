@@ -1,19 +1,19 @@
-# DRIVSTALLER #
+# DRIVSTALLER
 Installs a driver as a service.
 
 Generic standalone tool inspired by Windows Driver examples.
 
 
-## Version ##
+## Version
 1.1.9  
 Last changed: 26.04.2024
 
 
-## REQUIREMENTS ##
+## Requirements
 - msbuild
 
 
-## Compile ##
+## Compile
 ```bash
 $devcmd> build.bat [/ds] [/r] [/d] [/dp] [/ep] [/b 32|64] [/pdb] [/rtl] [/pts <toolset>] [/h]
 ```
@@ -27,13 +27,13 @@ The PlatformToolset defaults to "v142", but may be changed with the `/pts` optio
 or you could also use "WindowsApplicationForDrivers10.0" with WDK10 installed.
 
 
-## Usage ##
+## Usage
 
 ```bash
 $ drivstaller [options] <driver>|<service> [options]
 ```
 
-### Options ###
+### Options
 * /n Name of service for the /i option. 
      If not set, the name will be derived of the driver path.
      I.e. the driver base name without the .sys suffix.
@@ -54,8 +54,8 @@ $ drivstaller [options] <driver>|<service> [options]
 The /i, /u, /o, /x, /c options are exclusive.
 
 
-## Run ##
-### Examples ###
+## Run
+### Examples
 Install and start a driver:
 ```bash
 $ drivstaller driver.sys /i /s 3
@@ -98,13 +98,13 @@ $ drivstaller /c /n driver
 ```
 
 
-### Runtime Errors ###
+### Runtime Errors
 If a "VCRUNTIMExxx.dll not found Error" occurs on the target system, statically including runtime libraries is a solution.  
 This is done by using the `/rtl` or `/p:RunTimeLib=Debug|Release` flag.
 
 
-## COPYRIGHT, CREDITS & CONTACT ##
+## COPYRIGHT, CREDITS & CONTACT
 Published under [GNU GENERAL PUBLIC LICENSE](LICENSE).   
 
-#### Author ####
+### Author
 - Henning Braun ([henning.braun@fkie.fraunhofer.de](mailto:henning.braun@fkie.fraunhofer.de)) 

@@ -63,7 +63,7 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
         return FALSE;
     }
 
-    schSCManager = OpenSCManager(
+    schSCManager = OpenSCManagerA(
         NULL,                   // machine name: local
         NULL,                   // database name: local
         SC_MANAGER_ALL_ACCESS   // access 
@@ -137,7 +137,7 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Checking driver service %s\n", Name);
 
-    schService = OpenService(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
 
     if ( schService == NULL )
     {
@@ -149,7 +149,7 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         }
         else
         {
-            printf("ERROR (0x%x): OpenService failed! \n", GetLastError());
+            printf("ERROR (0x%x): OpenServiceA failed! \n", GetLastError());
             return FALSE;
         }
     }
@@ -222,11 +222,11 @@ BOOL RemoveDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Removing driver service %s\n", Name);
 
-    schService = OpenService(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
 
     if ( schService == NULL )
     {
-        printf("ERROR (0x%x): OpenService failed! \n", GetLastError());
+        printf("ERROR (0x%x): OpenServiceA failed! \n", GetLastError());
         return FALSE;
     }
 
@@ -253,15 +253,15 @@ BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Starting driver %s\n", Name);
 
-    schService = OpenService(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
 
     if ( schService == NULL )
     {
-        printf("ERROR (0x%x): OpenService failed!\n", GetLastError());
+        printf("ERROR (0x%x): OpenServiceA failed!\n", GetLastError());
         return FALSE;
     }
 
-    if ( !StartService(schService, 0, NULL) )
+    if ( !StartServiceA(schService, 0, NULL) )
     {
         err = GetLastError();
 
@@ -272,7 +272,7 @@ BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         }
         else
         {
-            printf("ERROR (0x%x): StartService failure! (%s)\n", err, getErrorString(err));
+            printf("ERROR (0x%x): StartServiceA failure! (%s)\n", err, getErrorString(err));
             return FALSE;
         }
     }
@@ -293,7 +293,7 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Stopping driver %s\n", Name);
 
-    schService = OpenService(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
 
     if ( schService == NULL )
     {
@@ -305,7 +305,7 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         }
         else
         {
-            printf("ERROR (0x%x): OpenService failed!\n", le);
+            printf("ERROR (0x%x): OpenServiceA failed!\n", le);
             return FALSE;
         }
     }
