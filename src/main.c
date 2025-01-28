@@ -18,8 +18,8 @@
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
 #define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.9")
-#define LAST_CHANGED ("26.04.2024")
+#define VERSION ("1.1.10")
+#define LAST_CHANGED ("28.01.2025")
 
 
 #define MAX_DEPENDENCIES (0x10)
@@ -136,33 +136,33 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     switch ( params.Mode )
     {
         case MODE_CHECK:
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK, SC_MANAGER_CONNECT);
             break;
 
         case MODE_INSTALL:
             //printf("Installing %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL, SC_MANAGER_ALL_ACCESS);
             if ( !success )
             {
                 printf("ERROR: Unable to install driver.\n");
 
-                ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE);
+                ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE, SC_MANAGER_ALL_ACCESS);
             }
             break;
 
         case MODE_REMOVE:
             //printf("Removing %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE, SC_MANAGER_ALL_ACCESS);
             break;
 
         case MODE_START:
             //printf("Starting %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_START);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_START, SC_MANAGER_ALL_ACCESS);
             break;
 
         case MODE_STOP:
             //printf("Stopping %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP);
+            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP, SC_MANAGER_ALL_ACCESS);
             break;
 
         default:

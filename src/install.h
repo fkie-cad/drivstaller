@@ -17,7 +17,8 @@ ManageDriver(
     _In_ LPCTSTR ServiceExe,
     _In_ DWORD StartType,
     _In_opt_ PCHAR Dependencies,
-    _In_ USHORT Mode
+    _In_ USHORT Mode,
+    _In_ ULONG DesiredAccess
 );
 
 #endif

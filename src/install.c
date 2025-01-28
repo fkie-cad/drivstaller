@@ -51,9 +51,16 @@ StopDriver(
 
 
 
-BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartType, _In_opt_ PCHAR Dependencies, _In_ USHORT Mode)
+BOOL ManageDriver(
+    _In_ LPCTSTR Name, 
+    _In_ LPCTSTR ServiceExe, 
+    _In_ DWORD StartType, 
+    _In_opt_ PCHAR Dependencies, 
+    _In_ USHORT Mode,
+    _In_ ULONG DesiredAccess
+)
 {
-    SC_HANDLE   schSCManager;
+    SC_HANDLE schSCManager;
     BOOL rCode = TRUE;
 
     if ( !Name || !ServiceExe )
@@ -62,11 +69,12 @@ BOOL ManageDriver(_In_ LPCTSTR Name, _In_ LPCTSTR ServiceExe, _In_ DWORD StartTy
 
         return FALSE;
     }
+    printf("DesiredAccess: 0x%x\n", DesiredAccess);
 
     schSCManager = OpenSCManagerA(
         NULL,                   // machine name: local
         NULL,                   // database name: local
-        SC_MANAGER_ALL_ACCESS   // access 
+        DesiredAccess   // access 
     );
 
     if ( !schSCManager )
@@ -137,7 +145,7 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Checking driver service %s\n", Name);
 
-    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_QUERY_STATUS);
 
     if ( schService == NULL )
     {
@@ -149,15 +157,31 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         }
         else
         {
-            printf("ERROR (0x%x): OpenServiceA failed! \n", GetLastError());
+            printf("ERROR (0x%x): OpenServiceA failed! \n", le);
             return FALSE;
         }
     }
-    else
+    printf("=> The service \"%s\" exists.\n", Name);
+
+    SERVICE_STATUS serviceStatus = { 0 };
+    BOOL b = QueryServiceStatus(schService, &serviceStatus);
+    if ( !b )
     {
-        printf("=> The service \"%s\" exists.\n", Name);
+        ULONG le = GetLastError();
+        printf("ERROR (0x%x): QueryServiceStatus failed! \n", le);
+        goto clean;
     }
 
+    printf("status:\n");
+    printf("  ServiceType: 0x%x\n", serviceStatus.dwServiceType);
+    printf("  CurrentState: 0x%x\n", serviceStatus.dwCurrentState);
+    printf("  ControlsAccepted: 0x%x\n", serviceStatus.dwControlsAccepted);
+    printf("  Win32ExitCode: 0x%x\n", serviceStatus.dwWin32ExitCode);
+    printf("  ServiceSpecificExitCode: 0x%x\n", serviceStatus.dwServiceSpecificExitCode);
+    printf("  CheckPoint: 0x%x\n", serviceStatus.dwCheckPoint);
+    printf("  WaitHint: 0x%x\n", serviceStatus.dwWaitHint);
+
+clean:
     if ( schService )
         CloseServiceHandle(schService);
 
@@ -253,7 +277,7 @@ BOOL StartDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Starting driver %s\n", Name);
 
-    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_START);
 
     if ( schService == NULL )
     {
@@ -293,7 +317,7 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     
     printf("Stopping driver %s\n", Name);
 
-    schService = OpenServiceA(SchSCManager, Name, SERVICE_ALL_ACCESS);
+    schService = OpenServiceA(SchSCManager, Name, SERVICE_STOP);
 
     if ( schService == NULL )
     {

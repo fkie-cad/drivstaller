@@ -18,9 +18,9 @@ set /a rtl=0
 set platform=x64
 set /a verbose=0
 
-set pts=v142
-:: set /a pts=v143
-:: set /a pts=WindowsApplicationForDrivers10.0
+::set pts=v142
+set pts=v143
+:: set pts=WindowsApplicationForDrivers10.0
 
 set prog_proj=drivstaller.vcxproj
 
