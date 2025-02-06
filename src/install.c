@@ -6,6 +6,8 @@
 
 #include "install.h"
 #include "errors.h"
+#include "statusStrings.h"
+
 
 //#pragma warning( disable : 4995 )
 
@@ -69,7 +71,6 @@ BOOL ManageDriver(
 
         return FALSE;
     }
-    printf("DesiredAccess: 0x%x\n", DesiredAccess);
 
     schSCManager = OpenSCManagerA(
         NULL,                   // machine name: local
@@ -173,9 +174,9 @@ BOOL CheckDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
     }
 
     printf("status:\n");
-    printf("  ServiceType: 0x%x\n", serviceStatus.dwServiceType);
-    printf("  CurrentState: 0x%x\n", serviceStatus.dwCurrentState);
-    printf("  ControlsAccepted: 0x%x\n", serviceStatus.dwControlsAccepted);
+    printf("  ServiceType: 0x%x (%s)\n", serviceStatus.dwServiceType, getTypeString(serviceStatus.dwServiceType));
+    printf("  CurrentState: 0x%x (%s)\n", serviceStatus.dwCurrentState, getStateString(serviceStatus.dwCurrentState));
+    printf("  ControlsAccepted: 0x%x (%s)\n", serviceStatus.dwControlsAccepted, getControlsAcceptedStr(serviceStatus.dwControlsAccepted));
     printf("  Win32ExitCode: 0x%x\n", serviceStatus.dwWin32ExitCode);
     printf("  ServiceSpecificExitCode: 0x%x\n", serviceStatus.dwServiceSpecificExitCode);
     printf("  CheckPoint: 0x%x\n", serviceStatus.dwCheckPoint);
