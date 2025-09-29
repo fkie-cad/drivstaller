@@ -15,6 +15,7 @@ set /a bitness=64
 set /a pdb=0
 set /a debug_print=%EP_FLAG%
 set /a rtl=0
+set /a cln=0
 set platform=x64
 set /a verbose=0
 
@@ -77,6 +78,15 @@ GOTO :ParseParams
         goto reParseParams
     )
     
+    IF /i "%~1"=="/cln" (
+        SET /a "cln=1"
+        goto reParseParams
+    )
+    IF /i "%~1"=="/clean" (
+        SET /a "cln=1"
+        goto reParseParams
+    )
+
     IF /i "%~1"=="/v" (
         SET /a verbose=1
         goto reParseParams
@@ -112,7 +122,7 @@ GOTO :ParseParams
         )
     )
 
-    set /a "s=%prog%"
+    set /a "s=%prog%+%cln%"
     if %s% == 0 (
         set /a prog=1
     )
@@ -120,6 +130,7 @@ GOTO :ParseParams
     if %verbose% == 1 (
         echo prog: %prog%
         echo.
+        echo clean: %cln%
         echo debug: %debug%
         echo release: %release%
         echo bitness: %bitness%
@@ -127,6 +138,10 @@ GOTO :ParseParams
         echo dprint: %debug_print%
         echo rtl: %rtl%
         echo pts=%pts%
+    )
+    
+    if %cln% NEQ 0 (
+        call :clean
     )
 
     if %prog%==1 call :build %prog_proj%
@@ -193,6 +208,14 @@ GOTO :ParseParams
         echo.
         echo.
     ENDLOCAL
+    
+    EXIT /B %ERRORLEVEL%
+    
+
+:clean
+setlocal
+    echo removing "%my_dir%\build" 
+    rmdir /s /q "%my_dir%\build" >nul 2>&1 
     
     EXIT /B %ERRORLEVEL%
 

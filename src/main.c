@@ -7,8 +7,10 @@
 
 #pragma warning ( disable : 4996 )
 
+#include "print.h"
 #include "args.h"
-#include "install.h"
+#include "load.h"
+#include "service.h"
 #include "Files.h"
 
 
@@ -17,17 +19,24 @@
 #define WIN_PARAM_IDENTIFIER ('-')
 #define PARAM_IDENTIFIER WIN_PARAM_IDENTIFIER
 
-#define BINARY_NAME ("drivstaller")
-#define VERSION ("1.1.10")
-#define LAST_CHANGED ("28.01.2025")
-
+#define BINARY_NAME "drivstaller"
+#define VERSION "1.2.0"
+#define LAST_CHANGED "29.09.2025"
 
 #define MAX_DEPENDENCIES (0x10)
+
+#define LOAD_MODE_SC (0)
+#define LOAD_MODE_NT (1)
+#define LOAD_MODE_MAX (2)
 
 
 
 typedef struct _DEPENDENCIES {
-    PCHAR Buffer;
+    union {
+        PVOID Buffer;
+        PCHAR BufferA;
+        PWCHAR BufferW;
+    };
     ULONG Size; // buffer size
     ULONG Count; // string count
 } DEPENDENCIES, *PDEPENDENCIES;
@@ -35,7 +44,8 @@ typedef struct _DEPENDENCIES {
 typedef struct _FLAGS {
     ULONG Verbose:1;
     ULONG ServiceNameSet:1;
-    ULONG Reserved:30;
+    ULONG LoadMode:1;
+    ULONG Reserved:29;
 } FLAGS, *PFLAGS;
 
 typedef struct _CMD_PARAMS {
@@ -69,7 +79,8 @@ parseDependencies(
     _In_reads_(argc) CHAR** argv, 
     _Inout_ PDEPENDENCIES Dependencies, 
     _In_ PINT DependencyIds, 
-    _In_ INT DependencyIdsCount
+    _In_ INT DependencyIdsCount,
+    _In_ ULONG LoadMode
 );
 
 BOOL
@@ -132,47 +143,89 @@ INT __cdecl main(_In_ ULONG argc, _In_reads_(argc) PCHAR argv[])
     //    printf("ERROR (0x%x): Not elevated! Please run as Admin.\n", -1);
     //    return ERROR_PRIVILEGE_NOT_HELD;
     //}
-
-    switch ( params.Mode )
+    
+    if ( params.Flags.LoadMode == LOAD_MODE_SC )
     {
-        case MODE_CHECK:
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK, SC_MANAGER_CONNECT);
-            break;
+        switch ( params.Mode )
+        {
+            case MODE_CHECK:
+                success = ManageService(params.ServiceName, params.Path, params.StartType, NULL, MODE_CHECK, SC_MANAGER_CONNECT);
+                break;
 
-        case MODE_INSTALL:
-            //printf("Installing %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL, SC_MANAGER_ALL_ACCESS);
-            if ( !success )
-            {
-                printf("ERROR: Unable to install driver.\n");
+            case MODE_INSTALL:
+                //printf("Installing %s\n", params.Path);
+                success = ManageService(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, MODE_INSTALL, SC_MANAGER_ALL_ACCESS);
+                if ( !success )
+                {
+                    printf("ERROR: Unable to install driver.\n");
 
-                ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE, SC_MANAGER_ALL_ACCESS);
-            }
-            break;
+                    ManageService(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE, SC_MANAGER_ALL_ACCESS);
+                }
+                break;
 
-        case MODE_REMOVE:
-            //printf("Removing %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE, SC_MANAGER_ALL_ACCESS);
-            break;
+            case MODE_REMOVE:
+                //printf("Removing %s\n", params.Path);
+                success = ManageService(params.ServiceName, params.Path, params.StartType, NULL, MODE_REMOVE, SC_MANAGER_ALL_ACCESS);
+                break;
 
-        case MODE_START:
-            //printf("Starting %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_START, SC_MANAGER_ALL_ACCESS);
-            break;
+            case MODE_START:
+                //printf("Starting %s\n", params.Path);
+                success = ManageService(params.ServiceName, params.Path, params.StartType, NULL, MODE_START, SC_MANAGER_ALL_ACCESS);
+                break;
 
-        case MODE_STOP:
-            //printf("Stopping %s\n", params.Path);
-            success = ManageDriver(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP, SC_MANAGER_ALL_ACCESS);
-            break;
+            case MODE_STOP:
+                //printf("Stopping %s\n", params.Path);
+                success = ManageService(params.ServiceName, params.Path, params.StartType, NULL, MODE_STOP, SC_MANAGER_ALL_ACCESS);
+                break;
 
-        default:
-            break;
+            default:
+                break;
+        }
+    }
+    else if ( params.Flags.LoadMode == LOAD_MODE_NT ) 
+    {
+        switch ( params.Mode )
+        {
+            case MODE_CHECK:
+                s = ManageNtLoader(params.ServiceName, params.Path, params.StartType, NULL, 0, MODE_CHECK);
+                break;
+
+            case MODE_INSTALL:
+                s = ManageNtLoader(params.ServiceName, params.Path, params.StartType, params.Dependencies.Buffer, params.Dependencies.Size, MODE_INSTALL);
+                break;
+
+            case MODE_REMOVE:
+                s = ManageNtLoader(params.ServiceName, params.Path, params.StartType, NULL, 0, MODE_REMOVE);
+                break;
+
+            case MODE_START:
+                s = ManageNtLoader(params.ServiceName, params.Path, params.StartType, NULL, 0, MODE_START);
+                break;
+
+            case MODE_STOP:
+                s = ManageNtLoader(params.ServiceName, params.Path, params.StartType, NULL, 0, MODE_STOP);
+                break;
+
+            default:
+                break;
+        }
+    
+        if ( params.Flags.Verbose )
+            printf("\n");
+
+        if ( s != 0 )
+            success = FALSE;
     }
 
     s = GetLastError();
 
-    if ( success )
-        printf("SUCCESS!\n");
+    if ( params.Flags.Verbose )
+    {
+        if ( success )
+            printf("SUCCESS!\n");
+        else
+            printf("FAILED!\n");
+    }
 
     if ( params.Dependencies.Buffer )
         free(params.Dependencies.Buffer);
@@ -209,6 +262,7 @@ VOID printHelp()
         "      3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)\n"
         "      4: Disabled.\n"
         " * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x%x) in the required order.\n"
+        " * /m Loading mode: 0: using service manger (default), 1: manual loading.\n"
         " * /v Verbose output.\n"
         " * /h Print this.\n"
         "\n"
@@ -219,6 +273,11 @@ VOID printHelp()
         BINARY_NAME
     );
 }
+
+#define LoadModeStr(_mode_) \
+    ((_mode_==LOAD_MODE_SC)?"Service Manager" \
+    : (_mode_==LOAD_MODE_NT)?"Manual Loading" \
+    : "Unknown")
 
 BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Params)
 {
@@ -271,6 +330,13 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
             Params->Mode = MODE_INSTALL;
             mode_count++;
         }
+        else if ( IS_1C_ARG(arg, 'm') || isArgOfType(arg, "load-mode") )
+        {
+            ULONG mode = strtoul(val0, NULL, 0) % LOAD_MODE_MAX;
+            Params->Flags.LoadMode = mode;
+            
+            i++;
+        }
         else if ( IS_1C_ARG(arg, 'n') )
         {
             if ( NOT_A_VALUE(val0) )
@@ -322,7 +388,8 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
         }
     }
 
-    parseDependencies(argc, argv, &Params->Dependencies, depIds, depIdsCount);
+    if ( Params->Mode == MODE_INSTALL )
+        parseDependencies(argc, argv, &Params->Dependencies, depIds, depIdsCount, Params->Flags.LoadMode);
     
     PCHAR bname = NULL;
     if ( path )
@@ -423,6 +490,7 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
     {
         printf("driver path: %s (%zu)\n", Params->Path, Params->PathSize);
         printf("service name: %s (%zu)\n", Params->ServiceName, Params->ServiceNameSize);
+        printf("load mode: %s (%u)\n", LoadModeStr(Params->Flags.LoadMode), Params->Flags.LoadMode);
 
         if (Params->Mode == MODE_INSTALL) printf("mode: %s\n", "MODE_INSTALL");
         else if (Params->Mode == MODE_REMOVE) printf("mode: %s\n", "MODE_REMOVE");
@@ -445,10 +513,21 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
         {
             printf("Dependencies (%u):\n", Params->Dependencies.Count );
             ULONG offset = 0;
-            for ( i = 0; i < (INT)Params->Dependencies.Count; i++ )
+            if ( Params->Flags.LoadMode == LOAD_MODE_SC )
             {
-                printf(" [%d] %s\n", (i+1), &Params->Dependencies.Buffer[offset]);
-                offset += (ULONG)strlen(&Params->Dependencies.Buffer[offset]) + 1;
+                for ( i = 0; i < (INT)Params->Dependencies.Count; i++ )
+                {
+                    printf(" [%d] %s\n", (i+1), &Params->Dependencies.BufferA[offset]);
+                    offset += (ULONG)strlen(&Params->Dependencies.BufferA[offset]) + 1;
+                }
+            }
+            else if ( Params->Flags.LoadMode == LOAD_MODE_NT )
+            {
+                for ( i = 0; i < (INT)Params->Dependencies.Count; i++ )
+                {
+                    printf(" [%d] %ws\n", (i+1), &Params->Dependencies.BufferW[offset]);
+                    offset += (ULONG)wcslen(&Params->Dependencies.BufferW[offset]) + 1;
+                }
             }
         }
 
@@ -458,7 +537,14 @@ BOOL parseArgs(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Out_ CMD_PARAMS* Pa
     return TRUE;
 }
 
-INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPENDENCIES Dependencies, _In_ PINT DependencyIds, _In_ INT DependencyIdsCount)
+INT parseDependencies(
+    _In_ INT argc, 
+    _In_reads_(argc) CHAR** argv, 
+    _Inout_ PDEPENDENCIES Dependencies, 
+    _In_ PINT DependencyIds, 
+    _In_ INT DependencyIdsCount,
+    _In_ ULONG LoadMode
+)
 {
     INT i;
     PCHAR arg = NULL;
@@ -492,8 +578,12 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
     if ( reqSize == 0 )
         return -1;
     
+    if ( LoadMode == LOAD_MODE_NT )
+        reqSize *= 2;
+
     // add dependencies array terminating 0
     // + one extra 0 for wrong implementations
+    // should be valid for wchar too
     reqSize += 2;
 
     if ( reqSize > ULONG_MAX )
@@ -503,9 +593,9 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
     //
     // alloc buffer
     
-    Dependencies->Buffer = (PCHAR)malloc(reqSize);
+    Dependencies->Buffer = malloc(reqSize);
     if ( !Dependencies->Buffer )
-        return -1;
+        return ERROR_NO_SYSTEM_RESOURCES;
 
 
     //
@@ -513,8 +603,16 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
 
     Dependencies->Count = count;
     Dependencies->Size = (ULONG)reqSize;
+    
+    SIZE_T restCch = 0;
+    if ( LoadMode == LOAD_MODE_SC )
+        restCch = reqSize;
+    else if ( LoadMode == LOAD_MODE_NT )
+        restCch = reqSize / 2;
 
     offset = 0;
+    size_t cch = 0;
+    //size_t cb = 0;
     for ( i = 0; i < DependencyIdsCount; i++ )
     {
         if ( DependencyIds[i] == -1)
@@ -524,16 +622,33 @@ INT parseDependencies(_In_ INT argc, _In_reads_(argc) CHAR** argv, _Inout_ PDEPE
         
         arg = argv[DependencyIds[i]];
 
-        reqSize = strlen(arg);
+        cch = strlen(arg);
 
-        memcpy(&Dependencies->Buffer[offset], arg, reqSize);
-        offset += reqSize;
-        Dependencies->Buffer[offset] = 0; // terminate string
-        offset++;
+        if ( LoadMode == LOAD_MODE_SC )
+            StringCchPrintfA(&Dependencies->BufferA[offset], restCch, "%s", arg);
+        else if ( LoadMode == LOAD_MODE_NT )
+            StringCchPrintfW(&Dependencies->BufferW[offset], restCch, L"%hs", arg);
+
+        offset += cch + 1;
+        restCch -= cch + 1;
+        //if ( LoadMode == LOAD_MODE_SC )
+        //    Dependencies->BufferA[offset] = 0; // terminate string
+        //else if ( LoadMode == LOAD_MODE_NT )
+        //    Dependencies->BufferW[offset] = 0; // terminate string
+
+        //offset++;
+        //restCch--;
     }
-    Dependencies->Buffer[offset] = 0; // terminate array
-    offset++;
-    Dependencies->Buffer[offset] = 0; // extra termination
+    if ( LoadMode == LOAD_MODE_SC )
+    {
+        *(PWCHAR)(&Dependencies->BufferA[offset]) = 0; // terminate array
+    }
+    else if ( LoadMode == LOAD_MODE_NT )
+    {
+        Dependencies->BufferW[offset] = 0; // terminate array
+    }
+
+    DPrintMemCol8(Dependencies->Buffer, Dependencies->Size, 0);
 
     return 0;
 }

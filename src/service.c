@@ -4,14 +4,13 @@
 #include <string.h>
 #include <strsafe.h>
 
-#include "install.h"
+#include "print.h"
+#include "service.h"
 #include "errors.h"
 #include "statusStrings.h"
 
 
 //#pragma warning( disable : 4995 )
-
-
 
 
 
@@ -21,8 +20,6 @@ CheckDriver(
     _In_ LPCTSTR Name
 );
 
-
-
 BOOL
 InstallDriver(
     _In_ SC_HANDLE SchSCManager,
@@ -31,7 +28,6 @@ InstallDriver(
     _In_ DWORD StartType,
     _In_opt_ PCHAR Dependencies
 );
-
 
 BOOL
 RemoveDriver(
@@ -53,7 +49,7 @@ StopDriver(
 
 
 
-BOOL ManageDriver(
+BOOL ManageService(
     _In_ LPCTSTR Name, 
     _In_ LPCTSTR ServiceExe, 
     _In_ DWORD StartType, 
@@ -67,20 +63,20 @@ BOOL ManageDriver(
 
     if ( !Name || !ServiceExe )
     {
-        printf("ERROR: Invalid Driver or Service provided to ManageDriver() \n");
+        EPrint("Invalid Driver or Service provided to ManageDriver() \n");
 
         return FALSE;
     }
 
     schSCManager = OpenSCManagerA(
-        NULL,                   // machine name: local
-        NULL,                   // database name: local
-        DesiredAccess   // access 
+        NULL, // machine name: local
+        NULL, // database name: local
+        DesiredAccess // access 
     );
 
     if ( !schSCManager )
     {
-        printf("ERROR (0x%x): Open SC Manager failed!\n", GetLastError());
+        EPrint("Open SC Manager failed! (0x%x)\n", GetLastError());
 
         return FALSE;
     }
@@ -125,7 +121,7 @@ BOOL ManageDriver(
             break;
 
         default:
-            printf("ERROR: Unknown ManageDriver() function.\n");
+            EPrint("Unknown ManageDriver() function.\n");
 
             rCode = FALSE;
             break;
@@ -358,5 +354,4 @@ BOOL StopDriver(_In_ SC_HANDLE SchSCManager, _In_ LPCTSTR Name)
         CloseServiceHandle(schService);
 
     return rCode;
-
 }

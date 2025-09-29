@@ -1,12 +1,14 @@
 # DRIVSTALLER
-Installs a driver as a service.
+Installs or uninstalls a driver.
 
-Generic standalone tool inspired by Windows Driver examples.
+Generic standalone tool to install, uninstall or check a driver service with two modes.
+One mode uses the service manager API.
+The other mode manually handles the service registry keys and calls `NtLoadDriver` or `NtUnloadDriver`.
 
 
 ## Version
-1.1.10  
-Last changed: 28.01.2025
+1.2.0  
+Last changed: 29.09.2025
 
 
 ## Requirements
@@ -22,8 +24,8 @@ or
 $devcmd> msbuild drivstaller.vcxproj [/p:Platform=x86|x64] [/p:Configuration=Debug|Release] [/p:RunTimeLib=Debug|Release] [/p:PDB=0|1] [/p:PlatformToolset=<v142|v143|WindowsApplicationForDrivers10.0>]
 ```
 
-The PlatformToolset defaults to "v142", but may be changed with the `/pts` option.
-"v142" is used for VS 2019 version, "v143" would be used in VS 2022, 
+The PlatformToolset defaults to "v143", but may be changed with the `/pts` option.
+"v142" is used for VS 2019 version, "v143" is used in VS 2022, 
 or you could also use "WindowsApplicationForDrivers10.0" with WDK10 installed.
 
 
@@ -49,17 +51,30 @@ $ drivstaller [options] <driver>|<service> [options]
     * 3: Demand (Default) (started by the SCM with a call to StartService, i.e. the /o parameter)
     * 4: Disabled
 * /d A driver dependency. If more dependencies are needed, pass more /d options (<= 0x10) in the required order.
+* /m Loading mode: 0: using service manger (default), 1: manual loading.
+* /v Verbose output
 * /h Print help.
 
 The /i, /u, /o, /x, /c options are exclusive.
 
+#### Remarks 
+Loading mode 0 uses the service manager API to install, uninstall, start, stop and check the driver.
+Loading mode 1 manually creates (or deletes) the service registry key and calls `NtLoadDriver` (or `NtUnloadDriver`) to install, uninstall, start, stop and check the driver.
+A driver installed with mode 1 is only know to the service manager after a reboot.
+
 
 ## Run
 ### Examples
-Install and start a driver:
+Install and start a driver (service manager api):
 ```bash
 $ drivstaller driver.sys /i /s 3
 ```
+
+Install and start a driver (manually loading):
+```bash
+$ drivstaller driver.sys /m 1 /i /s 3
+```
+
 Install and start a driver with a custom service name:
 ```bash
 $ drivstaller driver.sys /i /s 3 /n driverSvc
@@ -85,9 +100,9 @@ Install with dependencies and custom service name
 $ drivstaller driver.sys /i /n mydriver /d dependency1 /d dependency2
 ```
 
-Check, if a driver service "driverSvc" for the "driver.sys" already exists
+Check, if a driver service "mydriver" for the "driver.sys" already exists
 ```bash
-$ drivstaller /c /n driverSvc
+$ drivstaller /c mydriver
 ```
 
 Check, if a driver service "driver" for the "driver.sys" already exists
@@ -104,7 +119,4 @@ This is done by using the `/rtl` or `/p:RunTimeLib=Debug|Release` flag.
 
 
 ## COPYRIGHT, CREDITS & CONTACT
-Published under [GNU GENERAL PUBLIC LICENSE](LICENSE).   
-
-### Author
-- Henning Braun ([henning.braun@fkie.fraunhofer.de](mailto:henning.braun@fkie.fraunhofer.de)) 
+Published under [GNU GENERAL PUBLIC LICENSE](LICENSE).
